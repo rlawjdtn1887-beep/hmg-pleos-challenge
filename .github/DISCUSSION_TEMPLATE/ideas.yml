@@ -1,0 +1,53 @@
+title: "[아이디어] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        아이디어를 자유롭게 올려주세요. **한 줄 요약만 있어도 괜찮습니다.**
+        토론 후 괜찮은 아이디어는 `docs/01_ideas/`에 문서로 정리합니다. ([사용 설명서](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/blob/main/docs/GUIDE.md))
+  - type: input
+    id: summary
+    attributes:
+      label: 한 줄 요약
+      placeholder: 예) ○○한 상황에서 ○○를 도와주는 차량용 앱
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제
+      description: 어떤 상황에서 누가 어떤 불편을 겪나요?
+  - type: textarea
+    id: target
+    attributes:
+      label: 타깃
+      description: 운전자 / 동승자 / 특정 상황 등
+  - type: textarea
+    id: features
+    attributes:
+      label: 핵심 기능
+      description: 3개 이내로 적어주세요.
+      value: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: pleos
+    attributes:
+      label: Pleos SDK 활용
+      description: 어떤 차량 기능·데이터를 쓰나요? 왜 차량 앱이어야 하나요?
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: 구현 난이도 (예상)
+      options:
+        - 하
+        - 중
+        - 상
+        - 잘 모르겠음
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 비슷한 앱, 기사, 링크 등
