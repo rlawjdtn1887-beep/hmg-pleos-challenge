@@ -1,5 +1,15 @@
 # 협업 규칙
 
+## 처음 한 번: 커밋 작성자 설정
+
+커밋이 **자기 GitHub 계정의 기여로 기록되도록** 저장소를 clone한 뒤 한 번 설정합니다.
+이메일은 GitHub → Settings → Emails의 `...@users.noreply.github.com` 주소를 쓰면 개인 이메일이 공개되지 않습니다.
+
+```bash
+git config user.name "내GitHub아이디"
+git config user.email "숫자+내GitHub아이디@users.noreply.github.com"
+```
+
 ## 브랜치 규칙
 
 - `main`은 보호 브랜치입니다. **직접 push하지 않습니다.**
@@ -47,7 +57,19 @@ git push -u origin feature/작업명
   - `idea` `research` `design` `android` `pleos-sdk` `docs` `meeting` `submission` `bug`
 - 이슈는 Projects 보드 "공모전 준비"에서 `Todo → In Progress → Review → Done` 순서로 옮깁니다.
 
+## 진행 보고
+
+- 매주 각자 [docs/progress/](docs/progress/)에 진행 보고를 작성합니다.
+
+## APK 배포 (Releases)
+
+- APK 파일은 저장소에 커밋하지 않고 **Releases**에 첨부합니다.
+- 버전 규칙: `v<주>.<부>.<수정>` (예: `v0.1.0` 첫 시연용, `v1.0.0` 최종 제출본)
+- 순서: 저장소 → **Releases** → **Draft a new release** → 태그(`v0.1.0`) 생성 → 변경 내용 작성 → APK 첨부 → **Publish**
+- 배포 후 README의 "다운로드" 표를 업데이트합니다.
+
 ## 주의사항
 
 - `local.properties`, `*.keystore`, `.env*` 등 개인 설정·비밀 정보는 절대 커밋하지 않습니다.
+- APK 서명용 keystore 파일과 비밀번호는 저장소·Releases 어디에도 올리지 않습니다.
 - Pleos SDK 키 등 인증 정보는 팀 내부 채널로만 공유합니다.

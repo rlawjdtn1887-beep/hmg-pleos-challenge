@@ -5,6 +5,23 @@
 > **아이템: 미정**
 > 아이디어 후보는 [docs/01_ideas/](docs/01_ideas/)에서 제안하고 비교합니다.
 
+## 다운로드
+
+| 버전 | 날짜 | APK | 비고 |
+|------|------|-----|------|
+|  |  |  |  |
+
+> APK는 저장소 코드가 아닌 [Releases](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases)에 첨부합니다.
+> 최신 버전: [Latest Release](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases/latest)
+
+## 앱 소개
+
+<!-- 아이템 확정 후 작성: 한 줄 소개, 해결하려는 문제, 핵심 기능, Pleos SDK 활용 -->
+
+## 스크린샷 / 시연
+
+<!-- 주요 화면 이미지(docs/03_design/assets/)와 시연영상 링크 -->
+
 ## 팀원
 
 | 이름 | 역할 | GitHub |
@@ -13,6 +30,17 @@
 |  |  |  |
 |  |  |  |
 |  |  |  |
+
+## 팀원별 기여
+
+> 각자 맡은 부분과 주요 PR을 적습니다. 주차별 상세 내용은 [docs/progress/](docs/progress/)에 있습니다.
+
+| 이름 | 담당 | 주요 기여 | 주요 PR |
+|------|------|-----------|---------|
+|  |  |  |  |
+|  |  |  |  |
+
+전체 기여 내역: [Contributors](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/graphs/contributors) · [병합된 PR](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pulls?q=is%3Apr+is%3Amerged)
 
 ## 폴더 구조
 
@@ -28,6 +56,7 @@
 │   ├── 03_design/          # 화면 흐름·와이어프레임 (이미지는 assets/)
 │   ├── 04_roadmap/         # 주차별 로드맵
 │   ├── 05_submission/      # 발표자료·시연영상
+│   ├── progress/           # 주간 진행 보고 (팀원별 성과)
 │   └── meeting-notes/      # 회의록 (YYYY-MM-DD.md)
 └── .github/                # 이슈·PR 템플릿
 ```
@@ -59,4 +88,5 @@
 
 - 할 일은 **Issues**로 만들고 **Projects 보드("공모전 준비")** 에서 관리합니다.
 - 자유로운 아이디어 토론은 **Discussions**를 사용합니다.
+- 매주 각자 진행 상황을 [docs/progress/](docs/progress/)에 기록합니다.
 - 작업 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
