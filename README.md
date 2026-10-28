@@ -27,9 +27,8 @@
 | 이름 | 역할 | GitHub |
 |------|------|--------|
 |  |  | [@rlawjdtn1887-beep](https://github.com/rlawjdtn1887-beep) |
-|  |  |  |
-|  |  |  |
-|  |  |  |
+|  |  | [@darongki37](https://github.com/darongki37) |
+|  |  | [@Chanseo02](https://github.com/Chanseo02) |
 
 ## 팀원별 기여
 
@@ -37,8 +36,9 @@
 
 | 이름 | 담당 | 주요 기여 | 주요 PR |
 |------|------|-----------|---------|
-|  |  |  |  |
-|  |  |  |  |
+| @rlawjdtn1887-beep |  |  |  |
+| @darongki37 |  |  |  |
+| @Chanseo02 |  |  |  |
 
 전체 기여 내역: [Contributors](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/graphs/contributors) · [병합된 PR](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pulls?q=is%3Apr+is%3Amerged)
 
