@@ -1,0 +1,48 @@
+# ===== Android / Gradle =====
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output.json
+
+# ===== Kotlin =====
+.kotlin/
+*.kotlin_module
+
+# ===== Android Studio / IntelliJ =====
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ===== 로컬 설정 / 비밀 정보 =====
+local.properties
+*.keystore
+*.jks
+.env*
+google-services.json
+
+# ===== 로그 / 기타 =====
+*.log
+*.hprof
+.navigation/
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 개인 도구 설정 =====
+.claude/
