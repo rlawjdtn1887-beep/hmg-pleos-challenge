@@ -50,6 +50,7 @@
 ├── CONTRIBUTING.md         # 브랜치·커밋·PR 규칙
 ├── app/                    # Android Studio 프로젝트 (아이템 확정 후 생성)
 ├── docs/
+│   ├── GUIDE.md            # 팀 GitHub 사용 설명서
 │   ├── 00_contest-info/    # 공모전 요강·일정·심사기준, 제출 조건 체크리스트
 │   ├── 01_ideas/           # 아이디어 후보 (1개당 1파일) + 후보 비교표
 │   ├── 02_research/        # UX 리서치·레퍼런스 정리
@@ -85,6 +86,8 @@
 > 정확한 일정은 [docs/00_contest-info/](docs/00_contest-info/)에 공모전 요강 확인 후 정리합니다.
 
 ## 협업 방법
+
+> 처음이라면 [팀 GitHub 사용 설명서](docs/GUIDE.md)부터 읽어주세요.
 
 - 할 일은 **Issues**로 만들고 **Projects 보드("공모전 준비")** 에서 관리합니다.
 - 자유로운 아이디어 토론은 **Discussions**를 사용합니다.
