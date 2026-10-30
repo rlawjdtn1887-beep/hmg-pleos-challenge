@@ -26,9 +26,9 @@
 
 | 이름 | 역할 | GitHub |
 |------|------|--------|
-|  |  | [@rlawjdtn1887-beep](https://github.com/rlawjdtn1887-beep) |
-|  |  | [@darongki37](https://github.com/darongki37) |
-|  |  | [@Chanseo02](https://github.com/Chanseo02) |
+| 김정수 | 개발 | [@rlawjdtn1887-beep](https://github.com/rlawjdtn1887-beep) |
+| 김다희 | 기획, 발표 | [@darongki37](https://github.com/darongki37) |
+| 박찬서 | 개발 | [@Chanseo02](https://github.com/Chanseo02) |
 
 ## 팀원별 기여
 
