@@ -15,6 +15,7 @@ data class LiveTrip(
     val usedKwh: Float = 0f,
     val hardBrakeCount: Int = 0,
     val hardAccelCount: Int = 0,
+    val brakingHard: Boolean = false,
 )
 
 // 시작: P/N -> D/R, 종료: D/R -> P. 최소 거리 미만이면 버린다.
@@ -22,7 +23,6 @@ data class LiveTrip(
 class TripRecorder(
     private val estimator: RegenEstimator = RegenEstimator(),
     private val minTripKm: Float = 0.3f,
-    private val hardBrakePedal: Float = 60f,
     private val hardBrakeDecel: Float = 3.0f,
     private val hardAccelMps2: Float = 2.5f,
 ) {
@@ -82,8 +82,10 @@ class TripRecorder(
             if (d > 0f) a.used += d else if (v0 == null || v1 == null) a.regen += -d
         }
 
-        val hardBrakeNow = (s.brakePedalPercent ?: 0f) >= hardBrakePedal ||
-            (accelMps2 != null && -accelMps2 >= hardBrakeDecel)
+        // brakePedalPercent는 SDK가 Boolean(밟음/안 밟음)만 줘서 0f/100f로 근사한
+        // 값이라 "세게 밟았는지"를 못 가린다 (살짝만 밟아도 100f). 감속도(실측 속도
+        // 기반)만으로 급제동을 판단한다.
+        val hardBrakeNow = accelMps2 != null && -accelMps2 >= hardBrakeDecel
         if (hardBrakeNow && !a.brakingHard) a.hardBrake++
         a.brakingHard = hardBrakeNow
 
@@ -104,6 +106,7 @@ class TripRecorder(
             usedKwh = a.used,
             hardBrakeCount = a.hardBrake,
             hardAccelCount = a.hardAccel,
+            brakingHard = a.brakingHard,
         )
 
         if (wasDriving && !isDriving) {

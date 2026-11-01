@@ -42,9 +42,12 @@ fun DriveScreen() {
 
     val target = 0.3f
     val progress by animateFloatAsState(targetValue = (trip.regenKwh / target).coerceIn(0f, 1f), label = "regen")
+    // brakePedalPercent는 SDK가 Boolean(밟음/안 밟음)만 줘서 0f/100f로 근사한
+    // 값이라 "밟았는지"는 돼도 "세게 밟았는지"는 못 가린다. 급제동 여부는
+    // TripRecorder가 감속도(실측 속도 기반)로 판단한 값(trip.brakingHard)을 쓴다.
     val pedal = snap.brakePedalPercent ?: 0f
     val braking = pedal > 10f
-    val hardBrake = pedal > 60f
+    val hardBrake = trip.brakingHard
 
     Column {
         ScreenTitle("주행 중")
