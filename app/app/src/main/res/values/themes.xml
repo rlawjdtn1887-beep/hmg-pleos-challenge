@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.EcoFit" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#111418</item>
+        <item name="android:statusBarColor">#111418</item>
+    </style>
+</resources>
