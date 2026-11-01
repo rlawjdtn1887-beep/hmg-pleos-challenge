@@ -53,6 +53,11 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
     // 운전석 = Row1 Left (국내는 좌핸들 기준)
     private val driverSeat = SeatArea(SeatValue.ROW_1_LEFT)
 
+    // Vehicle Playground 실측: HVAC_POWER_ON에 area=ROW_1_LEFT 단독(0x1), ROW_1_CENTER
+    // 단독(0x2) 둘 다 "not supported" (IllegalArgumentException). 이 차량은 HVAC가
+    // 좌석 단독이 아니라 Row 전체를 합친 area를 요구하는 것으로 추정 -> 조합해서 재시도.
+    private val hvacArea = SeatArea(SeatValue.ROW_1_LEFT, SeatValue.ROW_1_RIGHT)
+
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
 
@@ -192,9 +197,9 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
             vehicle.getBrake().unregisterBrakePedalStatus(brakePedalListener)
             vehicle.getDrivingMode().unregisterDrivingModeState(drivingModeListener)
             vehicle.getHVAC().apply {
-                unregisterHvacPowerState(driverSeat, hvacPowerListener)
-                unregisterHvacTemperature(driverSeat, hvacTemperatureListener)
-                unregisterHvacFanSpeed(driverSeat, hvacFanSpeedListener)
+                unregisterHvacPowerState(hvacArea, hvacPowerListener)
+                unregisterHvacTemperature(hvacArea, hvacTemperatureListener)
+                unregisterHvacFanSpeed(hvacArea, hvacFanSpeedListener)
             }
             vehicle.getSeat().unregisterHvacSeatTemperature(driverSeat, seatHeatListener)
             vehicle.getOdometer().apply {
@@ -237,9 +242,9 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
 
     private fun registerHvac() {
         val hvac = vehicle.getHVAC()
-        hvac.registerHvacPowerState(driverSeat, hvacPowerListener)
-        hvac.registerHvacTemperature(driverSeat, hvacTemperatureListener)
-        hvac.registerHvacFanSpeed(driverSeat, hvacFanSpeedListener)
+        hvac.registerHvacPowerState(hvacArea, hvacPowerListener)
+        hvac.registerHvacTemperature(hvacArea, hvacTemperatureListener)
+        hvac.registerHvacFanSpeed(hvacArea, hvacFanSpeedListener)
         // outsideTempC: 대응 API 없음 -> null 유지
     }
 
