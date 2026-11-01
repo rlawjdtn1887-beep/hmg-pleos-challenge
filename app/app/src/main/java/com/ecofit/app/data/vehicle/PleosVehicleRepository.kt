@@ -63,6 +63,7 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         context,
         onSpeedKmh = { v -> _snapshot.update { it.copy(speedKmh = v, timestampMs = now()) } },
         onGear = { g -> _snapshot.update { it.copy(gear = g, timestampMs = now()) } },
+        onOutsideTempC = { t -> _snapshot.update { it.copy(outsideTempC = t, timestampMs = now()) } },
     )
 
     // ---- 리스너. stop()에서 unregister 하려면 인스턴스를 들고 있어야 한다 ----

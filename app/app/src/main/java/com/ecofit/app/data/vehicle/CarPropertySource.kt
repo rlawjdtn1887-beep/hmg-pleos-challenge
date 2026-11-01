@@ -8,12 +8,14 @@ import android.content.Context
 import android.util.Log
 import com.ecofit.app.data.model.Gear
 
-// Pleos Vehicle SDK에 기어·차속이 없어서 AAOS CarPropertyManager로 직접 받는다.
-// PERF_VEHICLE_SPEED 는 CAR_SPEED(런타임 권한), GEAR_SELECTION 은 CAR_POWERTRAIN 필요.
+// Pleos Vehicle SDK에 기어·차속·외기온이 없어서 AAOS CarPropertyManager로 직접 받는다.
+// PERF_VEHICLE_SPEED 는 CAR_SPEED, GEAR_SELECTION 은 CAR_POWERTRAIN,
+// ENV_OUTSIDE_TEMPERATURE 는 CAR_EXTERIOR_ENVIRONMENT 권한 필요.
 class CarPropertySource(
     private val context: Context,
     private val onSpeedKmh: (Float) -> Unit,
     private val onGear: (Gear) -> Unit,
+    private val onOutsideTempC: (Float) -> Unit,
 ) {
     private val tag = "CarPropertySource"
     private var car: Car? = null
@@ -27,6 +29,8 @@ class CarPropertySource(
                     (value.value as? Float)?.let { onSpeedKmh(it * 3.6f) }
                 VehiclePropertyIds.GEAR_SELECTION ->
                     (value.value as? Int)?.let { onGear(toGear(it)) }
+                VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE ->
+                    (value.value as? Float)?.let { onOutsideTempC(it) }
             }
         }
 
@@ -45,6 +49,7 @@ class CarPropertySource(
 
         register(m, VehiclePropertyIds.PERF_VEHICLE_SPEED, 5f)
         register(m, VehiclePropertyIds.GEAR_SELECTION, CarPropertyManager.SENSOR_RATE_ONCHANGE)
+        register(m, VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE, CarPropertyManager.SENSOR_RATE_ONCHANGE)
     }
 
     private fun register(m: CarPropertyManager, id: Int, rate: Float) {
