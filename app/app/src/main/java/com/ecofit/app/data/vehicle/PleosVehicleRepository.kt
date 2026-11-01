@@ -1,8 +1,23 @@
 package com.ecofit.app.data.vehicle
 
 import ai.pleos.playground.vehicle.Vehicle
+import ai.pleos.playground.vehicle.api.model.area.SeatArea
+import ai.pleos.playground.vehicle.constant.area.SeatValue
+import ai.pleos.playground.vehicle.constant.control.DrivingModeType
+import ai.pleos.playground.vehicle.listener.BrakePedalStatusListener
+import ai.pleos.playground.vehicle.listener.DistanceDrivenListener
+import ai.pleos.playground.vehicle.listener.DrivingModeStateListener
+import ai.pleos.playground.vehicle.listener.DrivingTimeListener
+import ai.pleos.playground.vehicle.listener.EvBatteryEfficiencyListener
+import ai.pleos.playground.vehicle.listener.EvBatteryStateOfChargeListener
+import ai.pleos.playground.vehicle.listener.HvacFanSpeedListener
+import ai.pleos.playground.vehicle.listener.HvacPowerStateListener
+import ai.pleos.playground.vehicle.listener.HvacSeatTemperatureListener
+import ai.pleos.playground.vehicle.listener.HvacTemperatureValueListener
+import ai.pleos.playground.vehicle.listener.RangeRemainingListener
 import android.content.Context
 import android.util.Log
+import com.ecofit.app.data.model.DriveMode
 import com.ecofit.app.data.model.VehicleSnapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +35,23 @@ import kotlinx.coroutines.flow.update
  * 각 도메인의 정확한 메서드/리스너 이름은 Android Studio에서
  * vehicle.getEvBattery(). 까지 치고 자동완성으로 확인.
  * 샘플: https://github.com/Pleos-Playground/pleos-sample-vehicle-app (VehicleClient.kt 의 Door 패턴과 동일)
+ *
+ * Vehicle 2.3.2 SDK(aar) 실제 디컴파일 결과로 확인한 사항:
+ *  - remainingRangeKm 은 EvBattery 가 아니라 Odometer.registerRangeRemainingListener 에 있음
+ *  - Brake 는 페달 위치(%) API가 없고 getCurrentBrakePedalStatus/registerBrakePedalStatus 가
+ *    Boolean(밟음/안 밟음)만 줌 -> brakePedalPercent 는 0f/100f 로만 근사 가능
+ *  - batteryEnergyKwh(순간 잔존 kWh), isCharging, HVAC 의 outsideTempC 에 대응하는 API가
+ *    SDK에 없음 -> null 유지 (차종/에뮬레이터가 늘려주면 그때 다시 확인)
+ *  - vehicle.getHvac() 아님, vehicle.getHVAC() (SDK 클래스명이 전부 대문자)
  */
 class PleosVehicleRepository(context: Context) : VehicleRepository {
 
     private val tag = "PleosVehicleRepo"
     private val vehicle = Vehicle(context.applicationContext)
     private var initialized = false
+
+    // 운전석 = Row1 Left (국내는 좌핸들 기준)
+    private val driverSeat = SeatArea(SeatValue.ROW_1_LEFT)
 
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
@@ -38,6 +64,99 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         onSpeedKmh = { v -> _snapshot.update { it.copy(speedKmh = v, timestampMs = now()) } },
         onGear = { g -> _snapshot.update { it.copy(gear = g, timestampMs = now()) } },
     )
+
+    // ---- 리스너. stop()에서 unregister 하려면 인스턴스를 들고 있어야 한다 ----
+
+    private val evBatterySocListener = object : EvBatteryStateOfChargeListener {
+        override fun onEvBatteryStateOfChargeUpdated(value: Int?) {
+            _snapshot.update { it.copy(batterySocPercent = value?.toFloat(), timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("EvBatteryStateOfCharge", e)
+    }
+
+    private val evEfficiencyListener = object : EvBatteryEfficiencyListener {
+        override fun onEvBatteryEfficiencyUpdated(value: Float?) {
+            _snapshot.update { it.copy(evEfficiencyKmPerKwh = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("CurrentEvEfficiency", e)
+    }
+
+    private val rangeRemainingListener = object : RangeRemainingListener {
+        override fun onRangeRemainingChanged(value: Float?) {
+            _snapshot.update { it.copy(remainingRangeKm = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("RangeRemaining", e)
+    }
+
+    private val brakePedalListener = object : BrakePedalStatusListener {
+        override fun onBrakePedalStatusUpdated(value: Boolean?) {
+            // SDK가 페달 위치(%)가 아니라 밟음 여부만 줘서 0f/100f로 근사
+            _snapshot.update { it.copy(brakePedalPercent = if (value == true) 100f else 0f, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("BrakePedalStatus", e)
+    }
+
+    private val drivingModeListener = object : DrivingModeStateListener {
+        override fun onDrivingModeStateUpdated(value: DrivingModeType?) {
+            val mode = when (value) {
+                DrivingModeType.ECO -> DriveMode.ECO
+                DrivingModeType.NORMAL -> DriveMode.NORMAL
+                DrivingModeType.SPORT -> DriveMode.SPORT
+                else -> DriveMode.UNKNOWN
+            }
+            _snapshot.update { it.copy(driveMode = mode, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("DrivingModeState", e)
+    }
+
+    private val hvacPowerListener = object : HvacPowerStateListener {
+        override fun onHvacPowerStateUpdated(value: Boolean?) {
+            _snapshot.update { it.copy(hvacOn = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("HvacPowerState", e)
+    }
+
+    private val hvacTemperatureListener = object : HvacTemperatureValueListener {
+        override fun onHvacTemperatureUpdated(value: Float?, unit: Float?) {
+            _snapshot.update { it.copy(hvacTargetTempC = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("HvacTemperature", e)
+    }
+
+    private val hvacFanSpeedListener = object : HvacFanSpeedListener {
+        override fun onHvacFanSpeedUpdated(value: Int?) {
+            _snapshot.update { it.copy(fanSpeed = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("HvacFanSpeed", e)
+    }
+
+    private val seatHeatListener = object : HvacSeatTemperatureListener {
+        override fun onHvacSeatTemperatureUpdated(value: Int?) {
+            _snapshot.update { it.copy(driverSeatHeatLevel = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("HvacSeatTemperature", e)
+    }
+
+    private val odometerListener = object : DistanceDrivenListener {
+        override fun onDistanceDrivenUpdated(value: Float?) {
+            _snapshot.update { it.copy(odometerKm = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("DistanceDriven", e)
+    }
+
+    private val tripDistanceListener = object : DistanceDrivenListener {
+        override fun onDistanceDrivenUpdated(value: Float?) {
+            _snapshot.update { it.copy(tripDistanceKm = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("TripCurrentDrivingDistance", e)
+    }
+
+    private val tripDurationListener = object : DrivingTimeListener {
+        override fun onDrivingTimeUpdated(value: Int?) {
+            _snapshot.update { it.copy(tripDurationSec = value?.toLong(), timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("TripCurrentDrivingTime", e)
+    }
 
     override fun start() {
         // 권한 허용 후 다시 불릴 수 있어서 initialized 체크 전에 둔다
@@ -65,7 +184,24 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         carProps.stop()
         if (!initialized) return
         try {
-            // TODO(정수): 등록한 리스너 전부 unregister
+            vehicle.getEvBattery().apply {
+                unregisterEvBatteryStateOfCharge(evBatterySocListener)
+                unregisterCurrentEvEfficiency(evEfficiencyListener)
+            }
+            vehicle.getBrake().unregisterBrakePedalStatus(brakePedalListener)
+            vehicle.getDrivingMode().unregisterDrivingModeState(drivingModeListener)
+            vehicle.getHVAC().apply {
+                unregisterHvacPowerState(driverSeat, hvacPowerListener)
+                unregisterHvacTemperature(driverSeat, hvacTemperatureListener)
+                unregisterHvacFanSpeed(driverSeat, hvacFanSpeedListener)
+            }
+            vehicle.getSeat().unregisterHvacSeatTemperature(driverSeat, seatHeatListener)
+            vehicle.getOdometer().apply {
+                unregisterDistanceDriven(odometerListener)
+                unregisterTripCurrentDrivingDistance(tripDistanceListener)
+                unregisterTripCurrentDrivingTime(tripDurationListener)
+                unregisterRangeRemainingListener(rangeRemainingListener)
+            }
             vehicle.release()
         } catch (e: Exception) {
             Log.e(tag, "release failed", e)
@@ -74,45 +210,53 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         _isConnected.value = false
     }
 
-    // ---- 도메인별 등록. 패턴은 전부 같다: capability 확인 -> register(listener) ----
+    // ---- 도메인별 등록. 패턴은 전부 같다: register(listener) ----
 
     private fun registerEvBattery() {
         val ev = vehicle.getEvBattery()
-        // TODO(정수):
-        //  ev.checkXxxCapabilities(...)
-        //  ev.registerEvBatteryStateOfCharge(listener)   -> soc
-        //  ev.registerXxx(...)                           -> batteryEnergyKwh, remainingRangeKm, isCharging
-        //  ev.getCurrentEvEfficiency(...)                -> evEfficiencyKmPerKwh
-        //
-        //  리스너 안에서:
-        //  _snapshot.update { it.copy(batterySocPercent = value, timestampMs = now()) }
+        ev.registerEvBatteryStateOfCharge(evBatterySocListener)
+        ev.registerCurrentEvEfficiency(evEfficiencyListener)
+        ev.getEvBatteryCapacity(
+            { capacity -> _snapshot.update { it.copy(batteryCapacityKwh = capacity, timestampMs = now()) } },
+            { e -> logFailure("EvBatteryCapacity", e) },
+        )
+        // batteryEnergyKwh(순간 잔존 kWh), isCharging: 대응 API 없음 -> null 유지
     }
 
     private fun registerBrake() {
         val brake = vehicle.getBrake()
-        // TODO(정수): brake pedal position(%) 콜백 -> brakePedalPercent
+        brake.registerBrakePedalStatus(brakePedalListener)
     }
 
     private fun registerDrivingMode() {
         val dm = vehicle.getDrivingMode()
-        // TODO(정수): drive mode(에코/노멀/스포츠) 콜백 -> driveMode
-        //  기어·차속은 SDK에 없어서 CarPropertySource에서 받음
+        dm.registerDrivingModeState(drivingModeListener)
+        // 기어·차속은 SDK에 없어서 CarPropertySource에서 받음
     }
 
     private fun registerHvac() {
-        val hvac = vehicle.getHvac()
-        // TODO(정수): power on/off, target temp, outside temp, fan speed
-        //  v2.3.x에서 registerHvacTemperature 시그니처 바뀜(HvacTemperatureValueListener) 주의
+        val hvac = vehicle.getHVAC()
+        hvac.registerHvacPowerState(driverSeat, hvacPowerListener)
+        hvac.registerHvacTemperature(driverSeat, hvacTemperatureListener)
+        hvac.registerHvacFanSpeed(driverSeat, hvacFanSpeedListener)
+        // outsideTempC: 대응 API 없음 -> null 유지
     }
 
     private fun registerSeat() {
         val seat = vehicle.getSeat()
-        // TODO(정수): driver seat heat level -> driverSeatHeatLevel
+        seat.registerHvacSeatTemperature(driverSeat, seatHeatListener)
     }
 
     private fun registerOdometer() {
         val odo = vehicle.getOdometer()
-        // TODO(정수): odometer, trip distance/duration -> odometerKm, tripDistanceKm, tripDurationSec
+        odo.registerDistanceDriven(odometerListener)
+        odo.registerTripCurrentDrivingDistance(tripDistanceListener)
+        odo.registerTripCurrentDrivingTime(tripDurationListener)
+        odo.registerRangeRemainingListener(rangeRemainingListener)
+    }
+
+    private fun logFailure(api: String, e: Exception) {
+        Log.e(tag, "$api failed", e)
     }
 
     private fun now() = System.currentTimeMillis()
