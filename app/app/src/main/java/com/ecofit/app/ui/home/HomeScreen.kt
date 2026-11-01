@@ -44,7 +44,8 @@ class HomeViewModel : ViewModel() {
 
 @Composable
 fun HomeScreen(vm: HomeViewModel = viewModel()) {
-    val (tripCount, s) by vm.weekly.collectAsStateWithLifecycle()
+    val weekly by vm.weekly.collectAsStateWithLifecycle()
+    val (tripCount, s) = weekly
     val snap by vm.snapshot.collectAsStateWithLifecycle()
 
     Column {
