@@ -29,6 +29,7 @@ import com.ecofit.app.ui.theme.Warn
 fun BriefingScreen() {
     val snap by EcoFitApp.instance.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     val destKm by EcoFitApp.instance.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
+    val etaMin by EcoFitApp.instance.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
 
     val range = snap.remainingRangeKm ?: 0f
     val margin = destKm?.let { range - it }
@@ -52,8 +53,10 @@ fun BriefingScreen() {
             Label("오늘 경로")
             Spacer(Modifier.height(8.dp))
             Text(
-                destKm?.let { d -> "목적지 ${d.fmt(0)}km · 남은 거리 ${range.fmt(0)}km · 여유 ${(range - d).fmt(0)}km" }
-                    ?: "설정된 목적지가 없어요. 내비게이션에서 목적지를 입력해보세요",
+                destKm?.let { d ->
+                    val eta = etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""
+                    "목적지 ${d.fmt(0)}km · 남은 거리 ${range.fmt(0)}km · 여유 ${(range - d).fmt(0)}km$eta"
+                } ?: "설정된 목적지가 없어요. 내비게이션에서 목적지를 입력해보세요",
                 fontSize = 28.sp,
                 color = if (margin == null || margin >= 30f) EcoGreen else Warn,
             )

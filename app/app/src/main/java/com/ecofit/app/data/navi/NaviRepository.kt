@@ -43,9 +43,13 @@ class NaviRepository(context: Context) {
     private val _remainDistanceKm = MutableStateFlow<Float?>(null)
     val remainDistanceKm: StateFlow<Float?> = _remainDistanceKm.asStateFlow()
 
+    private val _remainTimeMin = MutableStateFlow<Int?>(null)
+    val remainTimeMin: StateFlow<Int?> = _remainTimeMin.asStateFlow()
+
     private val listener = object : NaviHelperEventListener {
         override fun onDestinationInfo(destinationInfo: DestinationInfo) {
             _remainDistanceKm.value = destinationInfo.remainDistance / 1000f
+            _remainTimeMin.value = destinationInfo.remainTime / 60
         }
 
         override fun onDestinationChanged() {
@@ -55,6 +59,7 @@ class NaviRepository(context: Context) {
 
         override fun onDestinationArrived(destinationArrivedInfo: DestinationArrivedInfo) {
             _remainDistanceKm.value = null
+            _remainTimeMin.value = null
         }
 
         override fun onError(errorCode: NaviErrorCode) {
