@@ -172,8 +172,24 @@ private fun CurrentValueSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                val displayText =
+                    if (feature.read?.name == "getEvBatteryStateOfCharge") {
+                        val percent = currentValue
+                            .substringAfterLast(":")
+                            .trim()
+                            .toIntOrNull()
+
+                        if (percent != null) {
+                            "배터리 잔량: ${percent}%"
+                        } else {
+                            "배터리 잔량: 확인 중"
+                        }
+                    } else {
+                        currentValue
+                    }
+
                 Text(
-                    text = currentValue,
+                    text = displayText,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
