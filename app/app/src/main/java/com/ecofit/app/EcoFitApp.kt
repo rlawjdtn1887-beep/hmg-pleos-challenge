@@ -3,6 +3,7 @@ package com.ecofit.app
 import android.app.Application
 import com.ecofit.app.data.local.EcoFitDatabase
 import com.ecofit.app.data.local.toEntity
+import com.ecofit.app.data.navi.NaviRepository
 import com.ecofit.app.data.vehicle.FakeVehicleRepository
 import com.ecofit.app.data.vehicle.PleosVehicleRepository
 import com.ecofit.app.data.vehicle.VehicleRepository
@@ -27,6 +28,8 @@ class EcoFitApp : Application() {
 
     lateinit var vehicleRepo: VehicleRepository
         private set
+    lateinit var naviRepo: NaviRepository
+        private set
     lateinit var db: EcoFitDatabase
         private set
     val savings = SavingsCalculator()
@@ -38,6 +41,8 @@ class EcoFitApp : Application() {
         db = EcoFitDatabase.get(this)
         vehicleRepo = if (USE_FAKE_VEHICLE) FakeVehicleRepository() else PleosVehicleRepository(this)
         vehicleRepo.start()
+        naviRepo = NaviRepository(this)
+        naviRepo.start()
 
         appScope.launch {
             vehicleRepo.snapshot.collect { s ->

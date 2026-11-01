@@ -41,8 +41,7 @@ android {
 
 dependencies {
     implementation(libs.vehicle.sdk)
-    // NaviHelper는 브리핑 화면 붙일 때 주석 해제
-    // implementation(libs.navihelper.sdk)
+    implementation(libs.navihelper.sdk)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

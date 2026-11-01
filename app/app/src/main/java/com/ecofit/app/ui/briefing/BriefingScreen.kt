@@ -22,15 +22,16 @@ import com.ecofit.app.ui.theme.Warn
 
 /**
  * 출발 전 브리핑.
- * 목적지 거리는 NaviHelper 붙기 전까지 임시값. 정수가 NaviHelper 연동하면 교체.
+ * 목적지까지 남은 거리는 NaviHelper(naviRepo)에서 받아온다. 사용자가 내비 앱에
+ * 목적지를 설정해둔 경우에만 값이 들어오고, 없으면 null(안내 문구로 대체).
  */
 @Composable
 fun BriefingScreen() {
     val snap by EcoFitApp.instance.vehicleRepo.snapshot.collectAsStateWithLifecycle()
+    val destKm by EcoFitApp.instance.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
 
-    val destKm = 42f
     val range = snap.remainingRangeKm ?: 0f
-    val margin = range - destKm
+    val margin = destKm?.let { range - it }
     val outside = snap.outsideTempC
     val hvacOn = snap.hvacOn == true
     val seatHeat = (snap.driverSeatHeatLevel ?: 0) > 0
@@ -38,7 +39,7 @@ fun BriefingScreen() {
     val tips = buildList {
         if (outside != null && outside < 12f && hvacOn && !seatHeat)
             add("히터 대신 시트 열선을 켜면 약 +8km 더 갈 수 있어요")
-        if (margin < 30f)
+        if (margin != null && margin < 30f)
             add("여유가 ${margin.fmt(0)}km뿐이에요. 경로에 충전소를 넣을까요?")
         if (snap.driveMode == com.ecofit.app.data.model.DriveMode.SPORT)
             add("스포츠 모드는 전비가 약 15% 떨어져요. 에코로 바꿔볼까요?")
@@ -51,9 +52,10 @@ fun BriefingScreen() {
             Label("오늘 경로")
             Spacer(Modifier.height(8.dp))
             Text(
-                "목적지 ${destKm.fmt(0)}km · 남은 거리 ${range.fmt(0)}km · 여유 ${margin.fmt(0)}km",
+                destKm?.let { d -> "목적지 ${d.fmt(0)}km · 남은 거리 ${range.fmt(0)}km · 여유 ${(range - d).fmt(0)}km" }
+                    ?: "설정된 목적지가 없어요. 내비게이션에서 목적지를 입력해보세요",
                 fontSize = 28.sp,
-                color = if (margin >= 30f) EcoGreen else Warn,
+                color = if (margin == null || margin >= 30f) EcoGreen else Warn,
             )
         }
         Card(Modifier.fillMaxWidth()) {
