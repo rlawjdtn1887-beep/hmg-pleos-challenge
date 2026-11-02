@@ -1,7 +1,13 @@
 package com.ecofit.app.ui.drive
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,10 +15,20 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,11 +46,15 @@ import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
 import com.ecofit.app.ui.theme.Paper
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 // SavingsCalculator 단가와 같게 유지
 private const val WON_PER_KWH = 350f
 private const val TARGET_KWH = 0.3f
+// 회생이 이 시간 동안 더 늘지 않으면 한 번이 끝난 것으로 본다
+private const val EPISODE_END_MS = 1500L
+private const val POPUP_MS = 2500L
 
 // 누적은 TripRecorder가 하고 이 화면은 보여주기만 한다
 @Composable
@@ -49,6 +69,27 @@ fun DriveScreen() {
     val braking = (snap.brakePedalPercent ?: 0f) > 10f
     val hardBrake = trip.hardBraking
 
+    // 회생 한 번이 끝날 때마다 그동안 모은 금액을 잠깐 띄운다
+    var episodeStartKwh by remember { mutableFloatStateOf(trip.regenKwh) }
+    var popupWon by remember { mutableIntStateOf(0) }
+    var popupVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(trip.regenKwh) {
+        delay(EPISODE_END_MS)
+        val gained = ((trip.regenKwh - episodeStartKwh) * WON_PER_KWH).roundToInt()
+        episodeStartKwh = trip.regenKwh
+        if (gained >= 1) {
+            popupWon = gained
+            popupVisible = true
+        }
+    }
+    LaunchedEffect(popupVisible, popupWon) {
+        if (popupVisible) {
+            delay(POPUP_MS)
+            popupVisible = false
+        }
+    }
+
     val coach = when {
         snap.gear != Gear.D -> "출발하면 회생 제동을 기록해요"
         hardBrake -> "급제동이에요\n조금 더 일찍 페달을 떼보세요"
@@ -56,46 +97,66 @@ fun DriveScreen() {
         else -> "앞차와 거리를 두고\n가속 페달을 떼면 회생이 시작돼요"
     }
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
-                TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
-                Column {
-                    Amount("%,d".format(won), "원", 150.sp)
-                    Spacer(Modifier.height(16.dp))
-                    ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh",
-                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                    )
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
+                    TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                    Column {
+                        Amount("%,d".format(won), "원", 150.sp)
+                        Spacer(Modifier.height(16.dp))
+                        ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh",
+                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+                Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                    TileLabel("지금 속도")
+                    Column {
+                        Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
+                        Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                    }
                 }
             }
-            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("지금 속도")
-                Column {
-                    Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
-                    Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
+                    TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
+                    Text(
+                        coach,
+                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
+                        color = if (hardBrake) Amber else Paper,
+                    )
+                }
+                Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                    TileLabel("이번 주행")
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                    }
                 }
             }
         }
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
-                TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
-                Text(
-                    coach,
-                    fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
-                    color = if (hardBrake) Amber else Paper,
-                )
-            }
-            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("이번 주행")
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
-                }
-            }
+
+        AnimatedVisibility(
+            visible = popupVisible,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp),
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut(),
+        ) {
+            Text(
+                "+%,d원".format(popupWon),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(40.dp))
+                    .background(Ink)
+                    .padding(horizontal = 48.dp, vertical = 20.dp),
+                color = Ice,
+                fontSize = 72.sp,
+                fontWeight = FontWeight.Black,
+            )
         }
     }
 }
