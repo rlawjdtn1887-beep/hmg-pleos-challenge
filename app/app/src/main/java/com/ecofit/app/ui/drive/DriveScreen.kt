@@ -1,37 +1,60 @@
 package com.ecofit.app.ui.drive
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.model.Gear
-import com.ecofit.app.ui.Card
-import com.ecofit.app.ui.Label
-import com.ecofit.app.ui.ScreenTitle
+import com.ecofit.app.ui.Amount
+import com.ecofit.app.ui.ProgressBar
+import com.ecofit.app.ui.Tile
+import com.ecofit.app.ui.TileLabel
+import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.fmt
-import com.ecofit.app.ui.theme.EcoGreen
-import com.ecofit.app.ui.theme.EcoGreenDim
-import com.ecofit.app.ui.theme.Slate
-import com.ecofit.app.ui.theme.Warn
+import com.ecofit.app.ui.theme.Amber
+import com.ecofit.app.ui.theme.Ice
+import com.ecofit.app.ui.theme.Ink
+import com.ecofit.app.ui.theme.InkMuted
+import com.ecofit.app.ui.theme.Paper
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+
+// SavingsCalculator 단가와 같게 유지
+private const val WON_PER_KWH = 350f
+private const val TARGET_KWH = 0.3f
+// 회생이 이 시간 동안 더 늘지 않으면 한 번이 끝난 것으로 본다
+private const val EPISODE_END_MS = 1500L
+private const val POPUP_MS = 2500L
 
 // 누적은 TripRecorder가 하고 이 화면은 보여주기만 한다
 @Composable
@@ -40,54 +63,100 @@ fun DriveScreen() {
     val snap by app.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     val trip by app.recorder.live.collectAsStateWithLifecycle()
 
-    val target = 0.3f
-    val progress by animateFloatAsState(targetValue = (trip.regenKwh / target).coerceIn(0f, 1f), label = "regen")
-    // brakePedalPercent는 SDK가 Boolean(밟음/안 밟음)만 줘서 0f/100f로 근사한
-    // 값이라 "밟았는지"는 돼도 "세게 밟았는지"는 못 가린다. 급제동 여부는
-    // TripRecorder가 감속도(실측 속도 기반)로 판단한 값(trip.brakingHard)을 쓴다.
-    val pedal = snap.brakePedalPercent ?: 0f
-    val braking = pedal > 10f
-    val hardBrake = trip.brakingHard
+    val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
+    val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
+    // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다
+    val braking = (snap.brakePedalPercent ?: 0f) > 10f
+    val hardBrake = trip.hardBraking
 
-    Column {
-        ScreenTitle("주행 중")
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.size(300.dp)) {
-                    val stroke = 28.dp.toPx()
-                    val arc = Size(size.width - stroke, size.height - stroke)
-                    val off = Offset(stroke / 2, stroke / 2)
-                    drawArc(Slate, 135f, 270f, false, off, arc, style = Stroke(stroke, cap = StrokeCap.Round))
-                    drawArc(if (braking) EcoGreen else EcoGreenDim, 135f, 270f * progress, false, off, arc, style = Stroke(stroke, cap = StrokeCap.Round))
+    // 회생 한 번이 끝날 때마다 그동안 모은 금액을 잠깐 띄운다
+    var episodeStartKwh by remember { mutableFloatStateOf(trip.regenKwh) }
+    var popupWon by remember { mutableIntStateOf(0) }
+    var popupVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(trip.regenKwh) {
+        delay(EPISODE_END_MS)
+        val gained = ((trip.regenKwh - episodeStartKwh) * WON_PER_KWH).roundToInt()
+        episodeStartKwh = trip.regenKwh
+        if (gained >= 1) {
+            popupWon = gained
+            popupVisible = true
+        }
+    }
+    LaunchedEffect(popupVisible, popupWon) {
+        if (popupVisible) {
+            delay(POPUP_MS)
+            popupVisible = false
+        }
+    }
+
+    val coach = when {
+        snap.gear != Gear.D -> "출발하면 회생 제동을 기록해요"
+        hardBrake -> "급제동이에요\n조금 더 일찍 페달을 떼보세요"
+        braking -> "회생 중이에요\n페달을 부드럽게 유지하세요"
+        else -> "앞차와 거리를 두고\n가속 페달을 떼면 회생이 시작돼요"
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
+                    TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                    Column {
+                        Amount("%,d".format(won), "원", 150.sp)
+                        Spacer(Modifier.height(16.dp))
+                        ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh",
+                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text((trip.regenKwh * 1000).fmt(0), fontSize = 64.sp, color = EcoGreen)
-                    Label("Wh 회수")
+                Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                    TileLabel("지금 속도")
+                    Column {
+                        Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
+                        Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                    }
                 }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Card(Modifier.fillMaxWidth()) {
-                    Label("이번 트립")
-                    Spacer(Modifier.height(4.dp))
-                    Text("${trip.distanceKm.fmt(1)} km · ${trip.durationSec / 60}분 · ${snap.speedKmh?.fmt(0) ?: "—"} km/h", fontSize = 26.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("소모 ${(trip.usedKwh * 1000).fmt(0)} Wh · 회수 ${(trip.regenKwh * 1000).fmt(0)} Wh · 급제동 ${trip.hardBrakeCount}회", fontSize = 20.sp)
-                }
-                Card(Modifier.fillMaxWidth()) {
-                    Label("코칭")
-                    Spacer(Modifier.height(4.dp))
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
+                    TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
                     Text(
-                        when {
-                            snap.gear != Gear.D -> "출발하면 게이지가 차오릅니다"
-                            hardBrake -> "급제동이에요. 조금 더 일찍 떼보세요"
-                            braking -> "회생 중. 페달을 부드럽게 유지하세요"
-                            else -> "앞차와 거리 두고 가속 페달을 떼면 회생이 시작돼요"
-                        },
-                        fontSize = 22.sp,
-                        color = if (hardBrake) Warn else EcoGreen,
+                        coach,
+                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
+                        color = if (hardBrake) Amber else Paper,
                     )
                 }
+                Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                    TileLabel("이번 주행")
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                    }
+                }
             }
+        }
+
+        AnimatedVisibility(
+            visible = popupVisible,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp),
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut(),
+        ) {
+            Text(
+                "+%,d원".format(popupWon),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(40.dp))
+                    .background(Ink)
+                    .padding(horizontal = 48.dp, vertical = 20.dp),
+                color = Ice,
+                fontSize = 72.sp,
+                fontWeight = FontWeight.Black,
+            )
         }
     }
 }

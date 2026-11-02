@@ -5,21 +5,31 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val EcoGreen = Color(0xFF2ED47A)
-val EcoGreenDim = Color(0xFF1A7A48)
-val Charcoal = Color(0xFF111418)
-val Slate = Color(0xFF1C2128)
-val Mist = Color(0xFF8B949E)
-val Warn = Color(0xFFFFB020)
+val Black = Color(0xFF000000)
+val Ink = Color(0xFF0B0D10)
+val Panel = Color(0xFF17191D)
+val Paper = Color(0xFFFFFFFF)
+val Ice = Color(0xFF7CC8FF)
+val Muted = Color(0xFFA3ABB6)
+val InkMuted = Color(0xFF3D4550)
+val Amber = Color(0xFFFFB648)
+
+// 예전 화면 코드 호환용
+val EcoGreen = Ice
+val EcoGreenDim = Color(0xFF3E6A8A)
+val Charcoal = Ink
+val Slate = Panel
+val Mist = Muted
+val Warn = Amber
 
 private val scheme = darkColorScheme(
-    primary = EcoGreen,
-    onPrimary = Charcoal,
-    background = Charcoal,
-    surface = Slate,
-    onBackground = Color.White,
-    onSurface = Color.White,
-    secondary = Mist,
+    primary = Ice,
+    onPrimary = Ink,
+    background = Black,
+    surface = Panel,
+    onBackground = Paper,
+    onSurface = Paper,
+    secondary = Muted,
 )
 
 @Composable
