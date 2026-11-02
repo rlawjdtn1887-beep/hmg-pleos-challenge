@@ -5,35 +5,44 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ecofit.app.ui.EcoLogo
 import com.ecofit.app.ui.briefing.BriefingScreen
 import com.ecofit.app.ui.drive.DriveScreen
 import com.ecofit.app.ui.home.HomeScreen
 import com.ecofit.app.ui.report.ReportScreen
+import com.ecofit.app.ui.theme.Black
 import com.ecofit.app.ui.theme.EcoFitTheme
+import com.ecofit.app.ui.theme.Ink
+import com.ecofit.app.ui.theme.InkMuted
+import com.ecofit.app.ui.theme.Paper
 
 class MainActivity : ComponentActivity() {
 
@@ -55,39 +64,76 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Dest(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private data class Dest(val route: String, val label: String)
 
 private val dests = listOf(
-    Dest("home", "홈", Icons.Default.Home),
-    Dest("briefing", "출발 전", Icons.Default.Info),
-    Dest("drive", "주행 중", Icons.Default.PlayArrow),
-    Dest("report", "리포트", Icons.Default.List),
+    Dest("home", "홈"),
+    Dest("briefing", "출발 전"),
+    Dest("drive", "주행 중"),
+    Dest("report", "리포트"),
 )
 
 @Composable
 fun EcoFitNav() {
     val nav = rememberNavController()
-    val backStack by nav.currentBackStackEntryAsState()
-    val current = backStack?.destination?.route
+    val current = nav.currentBackStackEntryAsState().value?.destination?.route
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Row {
-            NavigationRail(Modifier.fillMaxHeight().width(96.dp)) {
-                dests.forEach { d ->
-                    NavigationRailItem(
-                        selected = current == d.route,
-                        onClick = { if (current != d.route) nav.navigate(d.route) { launchSingleTop = true } },
-                        icon = { Icon(d.icon, contentDescription = d.label) },
-                        label = { Text(d.label) },
+    Row(
+        Modifier.fillMaxSize().background(Black).padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(
+            Modifier
+                .width(270.dp)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Paper)
+                .padding(horizontal = 14.dp, vertical = 26.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                Modifier.padding(start = 10.dp, bottom = 22.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EcoLogo(60.dp)
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text("EcoFit", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                    Text("회생 제동 코치", fontSize = 19.sp, color = InkMuted)
+                }
+            }
+            dests.forEach { d ->
+                val selected = current == d.route
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (selected) Ink else Color.Transparent)
+                        .clickable(role = Role.Tab) {
+                            if (!selected) nav.navigate(d.route) {
+                                launchSingleTop = true
+                                popUpTo("home")
+                            }
+                        }
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        d.label,
+                        fontSize = 30.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                        color = if (selected) Paper else InkMuted,
                     )
                 }
             }
-            NavHost(nav, startDestination = "home", modifier = Modifier.padding(24.dp)) {
-                composable("home") { HomeScreen() }
-                composable("briefing") { BriefingScreen() }
-                composable("drive") { DriveScreen() }
-                composable("report") { ReportScreen() }
-            }
+        }
+
+        NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f).fillMaxHeight()) {
+            composable("home") { HomeScreen() }
+            composable("briefing") { BriefingScreen() }
+            composable("drive") { DriveScreen() }
+            composable("report") { ReportScreen() }
         }
     }
 }
