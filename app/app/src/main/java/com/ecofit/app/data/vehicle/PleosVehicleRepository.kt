@@ -84,7 +84,7 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
 
     private val rangeRemainingListener = object : RangeRemainingListener {
         override fun onRangeRemainingChanged(value: Float?) {
-            _snapshot.update { it.copy(remainingRangeKm = value, timestampMs = now()) }
+            _snapshot.update { it.copy(remainingRangeKm =value?.div(1000f), timestampMs = now()) }
         }
         override fun onFailed(e: Exception) = logFailure("RangeRemaining", e)
     }
