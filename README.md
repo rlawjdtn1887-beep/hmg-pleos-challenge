@@ -9,7 +9,7 @@
 
 | 버전 | 날짜 | APK | 비고 |
 |------|------|-----|------|
-|  |  |  |  |
+| <!-- v0.1.0 --> | <!-- 2026-11-XX --> | <!-- Release에 업로드 후 링크 --> | 첫 데모용 APK 빌드 후 작성 |
 
 > APK는 저장소 코드가 아닌 [Releases](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases)에 첨부합니다.
 > 최신 버전: [Latest Release](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases/latest)
@@ -34,7 +34,11 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 
 ## 스크린샷 / 시연
 
-<!-- 주요 화면 이미지(docs/03_design/assets/)와 시연영상 링크 -->
+| 홈 | 출발 전 | 주행 중 | 리포트 |
+|------|------|------|------|
+| ![홈](docs/03_design/assets/screen-home.png) | ![출발 전](docs/03_design/assets/screen-briefing.png) | ![주행 중](docs/03_design/assets/screen-drive.png) | ![리포트](docs/03_design/assets/screen-report.png) |
+
+> 시연영상: [docs/05_submission/demo-video/](docs/05_submission/demo-video/)에 추가 예정
 
 ## 팀원
 
@@ -50,9 +54,9 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 
 | 이름 | 담당 | 주요 기여 | 주요 PR |
 |------|------|-----------|---------|
-| @rlawjdtn1887-beep |  |  |  |
-| @darongki37 |  |  |  |
-| @Chanseo02 |  |  |  |
+| @rlawjdtn1887-beep | Pleos SDK 연동 | `PleosVehicleRepository`(EvBattery/Brake/DrivingMode/HVAC/Seat/Odometer) 구현, NaviHelper 연동(출발 전 목적지 거리·도착 시간), 매니페스트 권한 누락 크래시 수정 | [#11](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/11), [#15](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/15), [#16](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/16) |
+| @darongki37 | 기획, 발표 | REGEN 아이디어 기획·검증, 공모전 서류·발표자료 준비 | [#8](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/8) |
+| @Chanseo02 | 앱 구조·UI | EcoFit 프로젝트 초기 세팅(DB/도메인/화면 4개), 타일 기반 UI 리디자인, 회생제동 금액 팝업, 급제동 판정 로직 고도화 | [#10](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/10), [#17](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pull/17) |
 
 전체 기여 내역: [Contributors](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/graphs/contributors) · [병합된 PR](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/pulls?q=is%3Apr+is%3Amerged)
 
@@ -80,24 +84,28 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 
 | 항목 | 내용 |
 |------|------|
-| 언어 | Kotlin |
+| 언어 | Kotlin 2.0.0 |
+| UI | Jetpack Compose (BOM 2024.04.01), Navigation Compose 2.8.9 |
+| 빌드 | AGP 8.8.2, Gradle |
+| 로컬 저장소 | Room 2.6.1 |
+| 비동기 | Kotlinx Coroutines 1.8.1 |
+| Pleos SDK | Vehicle SDK 2.3.2, NaviHelper SDK 3.0.5 |
 | IDE | Android Studio (차량용 에뮬레이터) |
-| SDK | Pleos SDK |
-| 테스트 환경 | Pleos Playground |
+| 테스트 환경 | Pleos Playground (Pleos Connect v2.1.0) |
 | 협업 | GitHub Issues / Projects / Discussions |
-
-<!-- 버전 정보(Android Studio, Gradle, Pleos SDK 등)는 개발 환경 세팅 후 채워주세요. -->
 
 ## 일정
 
-| 날짜 | 내용 | 비고 |
+| 날짜 (KST) | 내용 | 비고 |
 |------|------|------|
-|  | 접수 마감 |  |
-|  | 1차 심사 |  |
-|  | 결과 발표 |  |
-|  | 최종 제출 |  |
+| 2026.10.21(수) | 공고·접수 시작 | |
+| 2026.10.28(수) | 온라인 설명회 | |
+| **2026.11.15(일)** | **접수 마감** | |
+| 2026.11.23(월) | 1차 서류심사 결과 발표 | |
+| 2026.12.03(목)~04(금) | 2차 최종 PT 심사 | 오프라인, 실제 동작 앱 필요 |
+| 2026.12.18(금) | 최종 선정 결과 발표 | |
 
-> 정확한 일정은 [docs/00_contest-info/](docs/00_contest-info/)에 공모전 요강 확인 후 정리합니다.
+> 세부 내용은 [docs/00_contest-info/](docs/00_contest-info/)의 공모전 요강 참고.
 
 ## 협업 방법
 
