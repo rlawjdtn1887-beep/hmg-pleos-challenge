@@ -15,16 +15,19 @@ data class LiveTrip(
     val usedKwh: Float = 0f,
     val hardBrakeCount: Int = 0,
     val hardAccelCount: Int = 0,
-    val brakingHard: Boolean = false,
+    val hardBraking: Boolean = false,
 )
 
 // 시작: P/N -> D/R, 종료: D/R -> P. 최소 거리 미만이면 버린다.
 // 회생은 차속이 있으면 RegenEstimator, 없으면 배터리 kWh 증가분으로 계산.
+// 급제동/급가속은 1초 구간 가감속도로 판단. SDK 브레이크 값은 밟음 여부(0/100)뿐이라 쓰지 않는다.
 class TripRecorder(
     private val estimator: RegenEstimator = RegenEstimator(),
     private val minTripKm: Float = 0.3f,
-    private val hardBrakeDecel: Float = 3.0f,
-    private val hardAccelMps2: Float = 2.5f,
+    private val hardBrakeDecel: Float = 4.0f,
+    private val hardAccelMps2: Float = 3.0f,
+    private val windowMs: Long = 1000,
+    private val eventGapMs: Long = 3000,
 ) {
     private var prev: VehicleSnapshot? = null
     private var acc: Accumulator? = null
@@ -45,8 +48,10 @@ class TripRecorder(
         var seatHeatSec = 0f
         var tempSum = 0f
         var tempCount = 0
-        var brakingHard = false
-        var accelHard = false
+        var winTimeMs: Long? = null
+        var winSpeed = 0f
+        var lastBrakeEventMs = Long.MIN_VALUE / 2
+        var lastAccelEventMs = Long.MIN_VALUE / 2
     }
 
     fun feed(s: VehicleSnapshot): TripData? {
@@ -64,15 +69,14 @@ class TripRecorder(
         }
 
         val a = acc ?: return null
-        val dt = ((s.timestampMs - p.timestampMs) / 1000f).coerceIn(0.05f, 10f)
+        val now = s.timestampMs
+        val dt = ((now - p.timestampMs) / 1000f).coerceIn(0.05f, 10f)
 
         val v0 = p.speedKmh
         val v1 = s.speedKmh
-        var accelMps2: Float? = null
         if (v0 != null && v1 != null) {
             a.regen += estimator.step(v0, v1, dt)
             a.speedDistKm += (v0 + v1) / 2f / 3600f * dt
-            accelMps2 = estimator.accel(v0, v1, dt)
         }
 
         val e0 = p.batteryEnergyKwh
@@ -82,16 +86,22 @@ class TripRecorder(
             if (d > 0f) a.used += d else if (v0 == null || v1 == null) a.regen += -d
         }
 
-        // brakePedalPercent는 SDK가 Boolean(밟음/안 밟음)만 줘서 0f/100f로 근사한
-        // 값이라 "세게 밟았는지"를 못 가린다 (살짝만 밟아도 100f). 감속도(실측 속도
-        // 기반)만으로 급제동을 판단한다.
-        val hardBrakeNow = accelMps2 != null && -accelMps2 >= hardBrakeDecel
-        if (hardBrakeNow && !a.brakingHard) a.hardBrake++
-        a.brakingHard = hardBrakeNow
-
-        val hardAccelNow = accelMps2 != null && accelMps2 >= hardAccelMps2
-        if (hardAccelNow && !a.accelHard) a.hardAccel++
-        a.accelHard = hardAccelNow
+        // 1초마다 가감속도를 보고 이벤트는 3초에 한 번만 센다
+        if (v1 != null) {
+            val wt = a.winTimeMs
+            if (wt == null) {
+                a.winTimeMs = now; a.winSpeed = v1
+            } else if (now - wt >= windowMs) {
+                val accel = estimator.accel(a.winSpeed, v1, (now - wt) / 1000f)
+                if (-accel >= hardBrakeDecel && now - a.lastBrakeEventMs >= eventGapMs) {
+                    a.hardBrake++; a.lastBrakeEventMs = now
+                }
+                if (accel >= hardAccelMps2 && now - a.lastAccelEventMs >= eventGapMs) {
+                    a.hardAccel++; a.lastAccelEventMs = now
+                }
+                a.winTimeMs = now; a.winSpeed = v1
+            }
+        }
 
         if (s.hvacOn == true) a.hvacSec += dt
         if ((s.driverSeatHeatLevel ?: 0) > 0) a.seatHeatSec += dt
@@ -101,17 +111,17 @@ class TripRecorder(
         _live.value = LiveTrip(
             active = true,
             distanceKm = dist,
-            durationSec = (s.timestampMs - a.startTimeMs) / 1000,
+            durationSec = (now - a.startTimeMs) / 1000,
             regenKwh = a.regen,
             usedKwh = a.used,
             hardBrakeCount = a.hardBrake,
             hardAccelCount = a.hardAccel,
-            brakingHard = a.brakingHard,
+            hardBraking = now - a.lastBrakeEventMs < 2000,
         )
 
         if (wasDriving && !isDriving) {
             acc = null
-            _live.value = _live.value.copy(active = false)
+            _live.value = _live.value.copy(active = false, hardBraking = false)
             if (dist < minTripKm) return null
 
             // kWh를 못 받는 차는 SoC 차이로 소모량 계산
@@ -123,7 +133,7 @@ class TripRecorder(
 
             return TripData(
                 startTimeMs = a.startTimeMs,
-                endTimeMs = s.timestampMs,
+                endTimeMs = now,
                 distanceKm = dist,
                 startSocPercent = a.startSoc,
                 endSocPercent = s.batterySocPercent,
@@ -139,11 +149,12 @@ class TripRecorder(
         return null
     }
 
-    // 주행거리계가 있으면 그걸, 없으면 차속 적분값
+    // 주행거리계가 움직이면 그걸, 아니면 차속 적분값
     private fun distance(a: Accumulator, s: VehicleSnapshot): Float {
         val start = a.startOdo
         val now = s.odometerKm
-        return if (start != null && now != null) (now - start).coerceAtLeast(0f) else a.speedDistKm
+        val odo = if (start != null && now != null) (now - start).coerceAtLeast(0f) else 0f
+        return if (odo > 0.01f) odo else a.speedDistKm
     }
 
     fun isRecording() = acc != null

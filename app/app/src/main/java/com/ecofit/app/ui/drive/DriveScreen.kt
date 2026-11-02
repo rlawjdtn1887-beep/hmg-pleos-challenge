@@ -45,9 +45,9 @@ fun DriveScreen() {
 
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
-    val pedal = snap.brakePedalPercent ?: 0f
-    val hardBrake = pedal > 60f
-    val braking = pedal > 10f
+    // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다
+    val braking = (snap.brakePedalPercent ?: 0f) > 10f
+    val hardBrake = trip.hardBraking
 
     val coach = when {
         snap.gear != Gear.D -> "출발하면 회생 제동을 기록해요"
