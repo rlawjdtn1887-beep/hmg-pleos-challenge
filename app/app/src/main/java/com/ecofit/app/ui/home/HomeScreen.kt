@@ -43,6 +43,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
+// SavingsCalculator의 커피 단가와 같게 유지
+private const val COFFEE_WON = 4500
+
 class HomeViewModel : ViewModel() {
     private val app = EcoFitApp.instance
     private val weekAgo = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
@@ -116,10 +119,17 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             }
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("이만큼이면")
-                Text(
-                    "${s.savedKm.fmt(1)}km를\n공짜로 달린 셈",
-                    fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 56.sp,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "${s.savedKm.fmt(1)}km를\n공짜로 달린 셈",
+                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 56.sp,
+                    )
+                    Text(
+                        if (s.coffeeCups >= 1f) "커피 ${s.coffeeCups.fmt(1)}잔 값"
+                        else "커피 한 잔까지 ${"%,d".format(COFFEE_WON - s.savedWon)}원",
+                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ice,
+                    )
+                }
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("지금 배터리")
