@@ -1,9 +1,15 @@
 package com.ecofit.app.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import com.ecofit.app.R
 
 val Black = Color(0xFF000000)
 val Ink = Color(0xFF0B0D10)
@@ -32,7 +38,25 @@ private val scheme = darkColorScheme(
     secondary = Muted,
 )
 
+// Pretendard (OFL). 차량 기본 글꼴보다 숫자와 한글이 또렷하다
+val Pretendard = FontFamily(
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+    Font(R.font.pretendard_extrabold, FontWeight.ExtraBold),
+    Font(R.font.pretendard_black, FontWeight.Black),
+)
+
+// 앱 안의 모든 Text가 이 글꼴을 쓴다
+private val base = TextStyle(fontFamily = Pretendard, fontWeight = FontWeight.SemiBold)
+private val typography = Typography(
+    displayLarge = base, displayMedium = base, displaySmall = base,
+    headlineLarge = base, headlineMedium = base, headlineSmall = base,
+    titleLarge = base, titleMedium = base, titleSmall = base,
+    bodyLarge = base, bodyMedium = base, bodySmall = base,
+    labelLarge = base, labelMedium = base, labelSmall = base,
+)
+
 @Composable
 fun EcoFitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = scheme, typography = typography, content = content)
 }
