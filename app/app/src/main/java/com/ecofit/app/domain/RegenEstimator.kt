@@ -9,13 +9,16 @@ class RegenEstimator(
     private val maxRegenKw: Float = 100f,
     private val rollingCoef: Float = 0.011f,
     private val dragArea: Float = 0.65f,
+    // 가속 페달 신호가 없어서 속도 변화만으로 감속을 판단한다. 실차 센서는 가속 중에도
+    // 틱마다 미세하게(0.1~0.3km/h) 흔들려서 이 폭 미만은 감속이 아니라 노이즈로 본다
+    private val noiseFloorKmh: Float = 0.5f,
 ) {
     private val g = 9.81f
     private val airDensity = 1.2f
 
-    // 반환: 이 구간에서 회수한 kWh. 감속이 아니면 0
+    // 반환: 이 구간에서 회수한 kWh. 감속이 아니거나 노이즈 범위면 0
     fun step(v0Kmh: Float, v1Kmh: Float, dtSec: Float): Float {
-        if (dtSec <= 0f || v1Kmh >= v0Kmh) return 0f
+        if (dtSec <= 0f || v1Kmh >= v0Kmh - noiseFloorKmh) return 0f
         val v0 = v0Kmh / 3.6f
         val v1 = v1Kmh / 3.6f
         val vAvg = (v0 + v1) / 2f
