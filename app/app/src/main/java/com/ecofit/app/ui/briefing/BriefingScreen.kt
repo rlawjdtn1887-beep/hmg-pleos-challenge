@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +88,20 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         if (snap.driveMode == DriveMode.SPORT)
             add("스포츠 모드는 전비가 약 15% 떨어져요. 에코 모드를 추천해요")
         if (isEmpty()) add("지금 설정 좋아요. 그대로 출발하세요")
+    }
+
+    // 출발 전 탭에 들어올 때 한 번, 목적지까지·남은 주행거리·제안을 묶어서 음성으로 브리핑한다.
+    // 값이 계속 바뀌어도(배터리%, 내비 폴링 등) 재생은 다시 안 하고, 탭을 다시 눌러 들어오면 새로 읽는다
+    LaunchedEffect(Unit) {
+        val destPart = when {
+            dest == null -> "목적지를 입력하면 배터리가 충분한지 알려드려요."
+            margin == null -> "목적지까지 ${dest.fmt(0)}킬로미터예요."
+            low -> "목적지까지 ${dest.fmt(0)}킬로미터, 도착하면 ${margin.fmt(0)}킬로미터밖에 안 남아요. 충전이 필요할 수 있어요."
+            else -> "목적지까지 ${dest.fmt(0)}킬로미터, 도착하면 ${margin.fmt(0)}킬로미터가 남아요."
+        }
+        val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
+        val tipsPart = tips.joinToString(". ")
+        app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "))
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
