@@ -5,17 +5,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -25,7 +30,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
 import com.ecofit.app.data.model.TripData
+import com.ecofit.app.domain.EcoScore
 import com.ecofit.app.ui.Amount
+import com.ecofit.app.ui.ProgressBar
+import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
@@ -35,6 +43,7 @@ import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
+import com.ecofit.app.ui.theme.Paper
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -50,6 +59,9 @@ class ReportViewModel : ViewModel() {
 
     fun savings(t: TripData) = app.savings.calculate(t)
 }
+
+// DriveScreen의 목표와 같게 유지
+private const val TARGET_KWH = 0.3f
 
 private val timeFmt = SimpleDateFormat("M/d HH:mm", Locale.KOREA)
 private val dayFmt = SimpleDateFormat("M/d", Locale.KOREA)
@@ -71,52 +83,75 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
 
     val latest = trips.first()
     val s = vm.savings(latest)
+    val score = EcoScore.of(latest)
     val recent = trips.take(6).reversed().map { it to vm.savings(it).savedWon }
     val maxWon = (recent.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
 
+    val regenWh = (s.regenKwh * 1000).fmt(0)
+    val coachTip = if (latest.hardBrakeCount > 0)
+        "급제동 ${latest.hardBrakeCount}회 · 조금 일찍 떼면 더 아낄 수 있어요"
+    else
+        "급제동 없이 부드럽게 달렸어요 · 이대로 유지하세요"
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tile(TileTone.Accent, Modifier.weight(1f).fillMaxHeight()) {
+            Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("방금 끝난 주행 · ${timeFmt.format(Date(latest.startTimeMs))}\n회생 제동으로 아낀 돈")
                 Column {
-                    Amount("%,d".format(s.savedWon), "원", 130.sp)
-                    s.vsBaselinePercent?.let {
-                        Text("기준 대비 전비 ${it.signed()}%", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Amount("%,d".format(s.savedWon), "원", 150.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분 · 되찾은 에너지 ${regenWh}Wh" +
+                            (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
+                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                TileLabel("에코 점수")
+                RingGauge(
+                    fraction = score / 100f,
+                    track = Ink.copy(alpha = 0.08f),
+                    fill = Ice,
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Amount("$score", "점", 92.sp)
+                        Text(EcoScore.label(score), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = InkMuted)
                     }
                 }
-            }
-            Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("되찾은 에너지", color = Ice)
-                Column {
-                    Amount((s.regenKwh * 1000).fmt(0), "Wh", 96.sp)
-                    Text("${s.savedKm.fmt(1)}km 더 달릴 수 있는 양", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("다음엔 이렇게", color = Amber)
                 Text(
-                    if (latest.hardBrakeCount > 0)
-                        "급제동 ${latest.hardBrakeCount}회\n조금 일찍 떼면\n더 아낄 수 있어요"
-                    else
-                        "급제동 없이\n부드럽게 달렸어요\n이대로 유지하세요",
-                    fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 50.sp,
+                    "급제동 ${latest.hardBrakeCount}회 · 급가속 ${latest.hardAccelCount}회",
+                    fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("이번 주행")
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분", fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                    Text("전비 ${s.efficiencyKmPerKwh?.fmt(1) ?: "—"} km/kWh", fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                    Text("급제동 ${latest.hardBrakeCount}회 · 급가속 ${latest.hardAccelCount}회", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+            Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
+                TileLabel("되찾은 에너지", color = Ice)
+                Column {
+                    Amount(regenWh, "Wh", 88.sp)
+                    Spacer(Modifier.height(14.dp))
+                    ProgressBar(s.regenKwh / TARGET_KWH, track = Ice.copy(alpha = 0.18f), fill = Ice)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "목표 ${(TARGET_KWH * 1000).toInt()}Wh · ${s.savedKm.fmt(1)}km 더 달릴 수 있는 양",
+                        fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                HorizontalDivider(color = Paper.copy(alpha = 0.12f))
+                Column {
+                    TileLabel("다음엔 이렇게", color = Amber)
+                    Spacer(Modifier.height(6.dp))
+                    Text(coachTip, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 38.sp)
                 }
             }
-            Tile(TileTone.Light, Modifier.weight(2f).fillMaxHeight()) {
+            Tile(TileTone.Light, Modifier.weight(1.5f).fillMaxHeight()) {
                 TileLabel("지난 주행")
                 Row(
-                    Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     recent.forEach { (t, won) ->
                         Column(

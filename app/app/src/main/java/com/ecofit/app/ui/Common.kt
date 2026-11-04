@@ -1,12 +1,15 @@
 package com.ecofit.app.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,13 +18,19 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -120,3 +129,34 @@ fun ScreenTitle(text: String) {
 fun Float.fmt(digits: Int = 1): String = "%.${digits}f".format(this)
 fun Int.won(): String = "%,d원".format(this)
 fun Int.signed(): String = if (this >= 0) "+$this" else "$this"
+
+// 0~1 비율을 원형 링으로. 가운데에 내용을 넣는다
+@Composable
+fun RingGauge(
+    fraction: Float,
+    track: Color,
+    fill: Color,
+    modifier: Modifier = Modifier,
+    stroke: Dp = 22.dp,
+    content: @Composable () -> Unit,
+) {
+    val f = fraction.coerceIn(0f, 1f)
+    Box(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = stroke.toPx()
+            val inset = w / 2
+            val arcSize = Size(size.width - w, size.height - w)
+            drawArc(
+                color = track, startAngle = 135f, sweepAngle = 270f, useCenter = false,
+                topLeft = Offset(inset, inset), size = arcSize,
+                style = Stroke(width = w, cap = StrokeCap.Round),
+            )
+            if (f > 0f) drawArc(
+                color = fill, startAngle = 135f, sweepAngle = 270f * f, useCenter = false,
+                topLeft = Offset(inset, inset), size = arcSize,
+                style = Stroke(width = w, cap = StrokeCap.Round),
+            )
+        }
+        content()
+    }
+}
