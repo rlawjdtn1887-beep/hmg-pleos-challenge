@@ -125,10 +125,6 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         braking -> "회생 중이에요\n페달을 부드럽게 유지하세요"
         else -> "앞차와 거리를 두고\n가속 페달을 떼면 회생이 시작돼요"
     }
-    // 코칭 문구가 바뀔 때만 말한다. 같은 문구가 유지되는 동안은 재생하지 않음
-    LaunchedEffect(coach) {
-        app.ttsRepo.speak(coach.replace("\n", " "))
-    }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
