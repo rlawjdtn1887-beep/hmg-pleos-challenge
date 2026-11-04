@@ -1,5 +1,9 @@
 package com.ecofit.app.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +22,11 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -140,7 +149,14 @@ fun RingGauge(
     stroke: Dp = 22.dp,
     content: @Composable () -> Unit,
 ) {
-    val f = fraction.coerceIn(0f, 1f)
+    // 처음 보일 때 0에서 차오르고, 값이 바뀌면 그쪽으로 움직인다
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val f by animateFloatAsState(
+        if (shown) fraction.coerceIn(0f, 1f) else 0f,
+        animationSpec = tween(COUNT_UP_MS, easing = FastOutSlowInEasing),
+        label = "ring",
+    )
     Box(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val w = stroke.toPx()
@@ -160,3 +176,21 @@ fun RingGauge(
         content()
     }
 }
+
+const val COUNT_UP_MS = 900
+
+// 화면에 처음 보일 때 0에서 목표 숫자까지 올라간다. 숫자가 바뀌면 거기서 이어서 움직인다
+@Composable
+fun countUp(target: Int): Int {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val v by animateIntAsState(
+        if (shown) target else 0,
+        animationSpec = tween(COUNT_UP_MS, easing = FastOutSlowInEasing),
+        label = "countUp",
+    )
+    return v
+}
+
+// 1분 미만이면 초로, 그 이상이면 분으로
+fun Long.durationText(): String = if (this < 60) "${this}초" else "${this / 60}분"

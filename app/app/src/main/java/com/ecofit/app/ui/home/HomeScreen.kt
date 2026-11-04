@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -28,11 +29,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
+import com.ecofit.app.data.model.TripData
+import com.ecofit.app.domain.EcoScore
+import com.ecofit.app.domain.TripSavings
 import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.ProgressBar
+import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Ice
@@ -42,9 +48,12 @@ import com.ecofit.app.ui.theme.Paper
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.math.roundToInt
 
 // SavingsCalculator의 커피 단가와 같게 유지
 private const val COFFEE_WON = 4500
+
+data class WeeklySummary(val tripCount: Int, val savings: TripSavings, val avgScore: Int?)
 
 class HomeViewModel : ViewModel() {
     private val app = EcoFitApp.instance
@@ -52,8 +61,11 @@ class HomeViewModel : ViewModel() {
 
     val weekly = app.db.tripDao().observeSince(weekAgo)
         .map { list -> list.map { it.toModel() } }
-        .map { trips -> trips.size to app.savings.weekly(trips) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0 to app.savings.weekly(emptyList()))
+        .map { trips -> WeeklySummary(trips.size, app.savings.weekly(trips), averageScore(trips)) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WeeklySummary(0, app.savings.weekly(emptyList()), null))
+
+    private fun averageScore(trips: List<TripData>): Int? =
+        if (trips.isEmpty()) null else trips.map { EcoScore.of(it) }.average().roundToInt()
 
     val snapshot = app.vehicleRepo.snapshot
     val isDemo = app.vehicleRepo.isDemo
@@ -66,7 +78,9 @@ class HomeViewModel : ViewModel() {
 @Composable
 fun HomeScreen(vm: HomeViewModel = viewModel()) {
     val weekly by vm.weekly.collectAsStateWithLifecycle()
-    val (tripCount, s) = weekly
+    val tripCount = weekly.tripCount
+    val s = weekly.savings
+    val avgScore = weekly.avgScore
     val snap by vm.snapshot.collectAsStateWithLifecycle()
     val isDemo by vm.isDemo.collectAsStateWithLifecycle()
 
@@ -78,7 +92,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("이번 주 회생 제동으로 아낀 전기요금")
                 Column {
-                    Amount("%,d".format(s.savedWon), "원", 150.sp)
+                    Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (tripCount == 0) "주행을 시작하면 여기에 쌓여요" else "이번 주 주행 ${tripCount}회",
@@ -103,13 +117,27 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 }
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("평균 전비")
-                Column {
-                    Amount(s.efficiencyKmPerKwh?.fmt(1) ?: "—", "km/kWh", 96.sp)
-                    s.vsBaselinePercent?.let {
-                        Text("기준 대비 ${it.signed()}%", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                TileLabel("이번 주 에코 점수")
+                RingGauge(
+                    fraction = (avgScore ?: 0) / 100f,
+                    track = Ink.copy(alpha = 0.08f),
+                    fill = Ice,
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Amount(avgScore?.let { "${countUp(it)}" } ?: "—", "점", 92.sp)
+                        Text(
+                            avgScore?.let { EcoScore.label(it) } ?: "첫 주행을 기다려요",
+                            fontSize = 24.sp, fontWeight = FontWeight.Bold, color = InkMuted,
+                        )
                     }
                 }
+                Text(
+                    s.efficiencyKmPerKwh?.let { "평균 전비 ${it.fmt(1)} km/kWh" + (s.vsBaselinePercent?.let { p -> " · 기준 대비 ${p.signed()}%" } ?: "") }
+                        ?: "주행 ${tripCount}회 평균",
+                    fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                )
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

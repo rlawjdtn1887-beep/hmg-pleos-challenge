@@ -1,6 +1,8 @@
 package com.ecofit.app.ui.report
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,9 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -19,6 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,17 +43,22 @@ import com.ecofit.app.data.local.toModel
 import com.ecofit.app.data.model.TripData
 import com.ecofit.app.domain.EcoScore
 import com.ecofit.app.ui.Amount
+import com.ecofit.app.ui.EcoLogo
 import com.ecofit.app.ui.ProgressBar
 import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.countUp
+import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
+import com.ecofit.app.ui.theme.Panel
+import com.ecofit.app.ui.theme.Muted
 import com.ecofit.app.ui.theme.Paper
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
@@ -50,6 +66,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class ReportViewModel : ViewModel() {
     private val app = EcoFitApp.instance
@@ -69,15 +86,10 @@ private val dayFmt = SimpleDateFormat("M/d", Locale.KOREA)
 @Composable
 fun ReportScreen(vm: ReportViewModel = viewModel()) {
     val trips by vm.trips.collectAsStateWithLifecycle()
+    val app = EcoFitApp.instance
 
     if (trips.isEmpty()) {
-        Tile(TileTone.Accent, Modifier.fillMaxSize()) {
-            TileLabel("주행 후 리포트")
-            Text(
-                "아직 기록된 주행이 없어요\n한 번 다녀오면 여기에 리포트가 생겨요",
-                fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 64.sp,
-            )
-        }
+        EmptyReport(onDemo = { app.vehicleRepo.startDemo() })
         return
     }
 
@@ -98,10 +110,10 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("방금 끝난 주행 · ${timeFmt.format(Date(latest.startTimeMs))}\n회생 제동으로 아낀 돈")
                 Column {
-                    Amount("%,d".format(s.savedWon), "원", 150.sp)
+                    Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분 · 되찾은 에너지 ${regenWh}Wh" +
+                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
                             (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
                         fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                     )
@@ -116,7 +128,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Amount("$score", "점", 92.sp)
+                        Amount("${countUp(score)}", "점", 92.sp)
                         Text(EcoScore.label(score), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = InkMuted)
                     }
                 }
@@ -131,7 +143,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("되찾은 에너지", color = Ice)
                 Column {
-                    Amount(regenWh, "Wh", 88.sp)
+                    Amount("${countUp((s.regenKwh * 1000).roundToInt())}", "Wh", 88.sp)
                     Spacer(Modifier.height(14.dp))
                     ProgressBar(s.regenKwh / TARGET_KWH, track = Ice.copy(alpha = 0.18f), fill = Ice)
                     Spacer(Modifier.height(10.dp))
@@ -169,6 +181,96 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                                 )
                             }
                             Text(dayFmt.format(Date(t.startTimeMs)), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 기록이 없을 때. 링 안에 로고를 두고, 데모로 바로 이어지게 한다
+@Composable
+private fun EmptyReport(onDemo: () -> Unit) {
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            Modifier
+                .weight(2f)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Panel)
+                .drawBehind {
+                    drawRect(
+                        Brush.radialGradient(
+                            0f to Ice.copy(alpha = 0.22f), 1f to Color.Transparent,
+                            center = Offset(size.width / 2f, size.height * 0.42f),
+                            radius = size.minDimension * 0.6f,
+                        )
+                    )
+                }
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            TileLabel("주행 후 리포트", color = Paper.copy(alpha = 0.72f))
+            RingGauge(
+                fraction = 0f,
+                track = Ice.copy(alpha = 0.16f),
+                fill = Ice,
+                modifier = Modifier.weight(1f).widthIn(max = 320.dp).padding(vertical = 8.dp),
+                stroke = 26.dp,
+            ) {
+                EcoLogo(120.dp)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("아직 기록된 주행이 없어요", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = Paper)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "D로 출발하고 P로 세우면\n여기에 아낀 돈과 에코 점수가 쌓여요",
+                    fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Muted,
+                    textAlign = TextAlign.Center, lineHeight = 32.sp,
+                )
+            }
+        }
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Ice)
+                    .clickable(onClick = onDemo)
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Box(Modifier.size(72.dp).clip(CircleShape).background(Ink), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(28.dp)) {
+                        val path = Path().apply {
+                            moveTo(size.width * 0.15f, 0f)
+                            lineTo(size.width, size.height / 2f)
+                            lineTo(size.width * 0.15f, size.height)
+                            close()
+                        }
+                        drawPath(path, Ice)
+                    }
+                }
+                Column {
+                    Text("데모 주행 보기", fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "약 45초 · 운전 없이 전체 흐름을 볼 수 있어요",
+                        fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Ink.copy(alpha = 0.75f),
+                    )
+                }
+            }
+            Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
+                TileLabel("리포트에 담기는 것")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf("회생 제동으로 아낀 돈", "에코 점수 0~100", "되찾은 에너지와 코칭", "지난 주행 비교 그래프").forEach {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(10.dp).clip(CircleShape).background(Ice))
+                            Spacer(Modifier.width(14.dp))
+                            Text(it, fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
