@@ -1,5 +1,6 @@
 package com.ecofit.app.ui.briefing
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +40,9 @@ import kotlin.math.roundToInt
 
 private const val LOW_MARGIN_KM = 30f
 private const val WON_PER_KWH = 350f
+
+// 탭하면 실행되는 제안은 onClick을 들고 있다. 그냥 안내뿐인 제안은 null
+private data class Tip(val text: String, val onClick: (() -> Unit)? = null)
 
 class BriefingViewModel : ViewModel() {
     private val app = EcoFitApp.instance
@@ -75,19 +80,28 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val tips = buildList {
         when {
             coldHvacOn && !seatHeat && !passengerSeatHeat ->
-                add("히터 대신 운전석·조수석 열선을 켜면 약 10km 더 갈 수 있어요")
+                add(Tip("히터 대신 운전석·조수석 열선을 켜면 약 10km 더 갈 수 있어요"))
             coldHvacOn && !seatHeat ->
-                add("히터 대신 운전석 열선을 켜면 약 8km 더 갈 수 있어요")
+                add(Tip("히터 대신 운전석 열선을 켜면 약 8km 더 갈 수 있어요"))
             coldHvacOn && !passengerSeatHeat ->
-                add("조수석 열선을 켜고 난방 온도를 낮추면 동승자도 더 아낄 수 있어요")
+                add(Tip("조수석 열선을 켜고 난방 온도를 낮추면 동승자도 더 아낄 수 있어요"))
         }
-        if (margin != null && margin < 0f)
-            add("이대로는 ${(-margin).fmt(0)}km 모자라요. 경로에 충전소를 넣어주세요")
-        else if (low)
-            add("여유가 ${margin!!.fmt(0)}km뿐이에요. 충전소를 경로에 넣어보세요")
+        val chargeTip = when {
+            margin != null && margin < 0f -> "이대로는 ${(-margin).fmt(0)}km 모자라요. 탭해서 충전소를 찾아보세요"
+            low -> "여유가 ${margin!!.fmt(0)}km뿐이에요. 탭해서 충전소를 찾아보세요"
+            else -> null
+        }
+        chargeTip?.let {
+            add(
+                Tip(it) {
+                    app.ttsRepo.speak("근처 충전소를 찾아드릴게요")
+                    app.naviRepo.showNearbyChargingStations()
+                }
+            )
+        }
         if (snap.driveMode == DriveMode.SPORT)
-            add("스포츠 모드는 전비가 약 15% 떨어져요. 에코 모드를 추천해요")
-        if (isEmpty()) add("지금 설정 좋아요. 그대로 출발하세요")
+            add(Tip("스포츠 모드는 전비가 약 15% 떨어져요. 에코 모드를 추천해요"))
+        if (isEmpty()) add(Tip("지금 설정 좋아요. 그대로 출발하세요"))
     }
 
     // 출발 전 탭에 들어올 때 한 번, 목적지까지·남은 주행거리·제안을 묶어서 음성으로 브리핑한다.
@@ -100,7 +114,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
             else -> "목적지까지 ${dest.fmt(0)}킬로미터, 도착하면 ${margin.fmt(0)}킬로미터가 남아요."
         }
         val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
-        val tipsPart = tips.joinToString(". ")
+        val tipsPart = tips.joinToString(". ") { it.text }
         app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "))
     }
 
@@ -168,8 +182,13 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
             Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("출발 전 제안", color = Ice)
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    tips.forEach {
-                        Text(it, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 46.sp)
+                    tips.forEach { tip ->
+                        Text(
+                            tip.text,
+                            fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 46.sp,
+                            color = if (tip.onClick != null) Ice else Color.Unspecified,
+                            modifier = tip.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier,
+                        )
                     }
                 }
             }

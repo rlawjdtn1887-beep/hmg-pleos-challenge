@@ -16,6 +16,8 @@
 
     <!-- NaviHelper SDK (protectionLevel="normal"). getDestinationInfo()에 필요. -->
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
+    <!-- requestNavigationScreen()으로 내비 화면(주변 충전소 등)을 띄울 때 필요 -->
+    <uses-permission android:name="pleos.car.permission.NAVI_CUSTOM_MAP" />
 
     <!-- TextToSpeech SDK. ON_DEVICE 모드로 CAAS 서비스에 bind할 때 필요. -->
     <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />

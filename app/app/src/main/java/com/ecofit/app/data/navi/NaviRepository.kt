@@ -3,6 +3,7 @@ package com.ecofit.app.data.navi
 import ai.pleos.playground.navi.constants.NaviErrorCode
 import ai.pleos.playground.navi.data.DestinationArrivedInfo
 import ai.pleos.playground.navi.data.DestinationInfo
+import ai.pleos.playground.navi.data.NavigationScreenRequest
 import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
 import android.content.Context
@@ -78,6 +79,13 @@ class NaviRepository(context: Context) {
             },
             onFailed = { e -> Log.e(tag, "NaviHelper connect failed", e) },
         )
+    }
+
+    // 브리핑 화면의 "충전소를 넣어주세요" 제안을 탭했을 때 실행.
+    // POI 좌표를 직접 찾아서 addWaypoint()로 넣는 API는 placesense 같은 장소 검색 SDK가
+    // 따로 있어야 해서(없음), 대신 내비 앱 자체의 "주변 충전소" 화면을 띄워 거기서 고르게 한다
+    fun showNearbyChargingStations() {
+        naviHelper.requestNavigationScreen(NavigationScreenRequest.NearbyChargingStations)
     }
 
     private fun startPolling() {
