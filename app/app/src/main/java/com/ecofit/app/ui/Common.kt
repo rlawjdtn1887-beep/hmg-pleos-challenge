@@ -120,3 +120,7 @@ fun ScreenTitle(text: String) {
 fun Float.fmt(digits: Int = 1): String = "%.${digits}f".format(this)
 fun Int.won(): String = "%,d원".format(this)
 fun Int.signed(): String = if (this >= 0) "+$this" else "$this"
+
+// 급제동/급가속은 전비뿐 아니라 동승자 승차감에도 직결된다. 100점에서 이벤트당 감점.
+fun comfortScore(hardBrakeCount: Int, hardAccelCount: Int): Int =
+    (100 - hardBrakeCount * 8 - hardAccelCount * 5).coerceIn(0, 100)

@@ -50,8 +50,9 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
     private val vehicle = Vehicle(context.applicationContext)
     private var initialized = false
 
-    // 운전석 = Row1 Left (국내는 좌핸들 기준)
+    // 운전석 = Row1 Left (국내는 좌핸들 기준), 조수석 = Row1 Right
     private val driverSeat = SeatArea(SeatValue.ROW_1_LEFT)
+    private val passengerSeat = SeatArea(SeatValue.ROW_1_RIGHT)
 
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
@@ -138,6 +139,13 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         override fun onFailed(e: Exception) = logFailure("HvacSeatTemperature", e)
     }
 
+    private val passengerSeatHeatListener = object : HvacSeatTemperatureListener {
+        override fun onHvacSeatTemperatureUpdated(value: Int?) {
+            _snapshot.update { it.copy(passengerSeatHeatLevel = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("PassengerHvacSeatTemperature", e)
+    }
+
     private val odometerListener = object : DistanceDrivenListener {
         override fun onDistanceDrivenUpdated(value: Float?) {
             _snapshot.update { it.copy(odometerKm = value, timestampMs = now()) }
@@ -196,7 +204,10 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
                 unregisterHvacTemperature(driverSeat, hvacTemperatureListener)
                 unregisterHvacFanSpeed(driverSeat, hvacFanSpeedListener)
             }
-            vehicle.getSeat().unregisterHvacSeatTemperature(driverSeat, seatHeatListener)
+            vehicle.getSeat().apply {
+                unregisterHvacSeatTemperature(driverSeat, seatHeatListener)
+                unregisterHvacSeatTemperature(passengerSeat, passengerSeatHeatListener)
+            }
             vehicle.getOdometer().apply {
                 unregisterDistanceDriven(odometerListener)
                 unregisterTripCurrentDrivingDistance(tripDistanceListener)
@@ -246,6 +257,7 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
     private fun registerSeat() {
         val seat = vehicle.getSeat()
         seat.registerHvacSeatTemperature(driverSeat, seatHeatListener)
+        seat.registerHvacSeatTemperature(passengerSeat, passengerSeatHeatListener)
     }
 
     private fun registerOdometer() {

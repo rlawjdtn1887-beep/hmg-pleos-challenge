@@ -29,6 +29,7 @@ import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
@@ -110,6 +111,10 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     Text("${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분", fontSize = 30.sp, fontWeight = FontWeight.Bold)
                     Text("전비 ${s.efficiencyKmPerKwh?.fmt(1) ?: "—"} km/kWh", fontSize = 30.sp, fontWeight = FontWeight.Bold)
                     Text("급제동 ${latest.hardBrakeCount}회 · 급가속 ${latest.hardAccelCount}회", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                    Text(
+                        "동승자 승차감 ${comfortScore(latest.hardBrakeCount, latest.hardAccelCount)}점",
+                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                    )
                 }
             }
             Tile(TileTone.Light, Modifier.weight(2f).fillMaxHeight()) {

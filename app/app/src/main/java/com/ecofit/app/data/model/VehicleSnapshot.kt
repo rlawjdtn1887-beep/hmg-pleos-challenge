@@ -38,6 +38,7 @@ data class VehicleSnapshot(
 
     // Seat
     val driverSeatHeatLevel: Int? = null,
+    val passengerSeatHeatLevel: Int? = null,
 
     // Odometer
     val odometerKm: Float? = null,

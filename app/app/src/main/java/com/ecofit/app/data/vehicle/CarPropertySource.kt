@@ -26,7 +26,10 @@ class CarPropertySource(
         override fun onChangeEvent(value: CarPropertyValue<*>) {
             when (value.propertyId) {
                 VehiclePropertyIds.PERF_VEHICLE_SPEED ->
-                    (value.value as? Float)?.let { onSpeedKmh(it * 3.6f) }
+                    (value.value as? Float)?.let {
+                        Log.d(tag, "PERF_VEHICLE_SPEED raw=$it m/s -> ${it * 3.6f} km/h")
+                        onSpeedKmh(it * 3.6f)
+                    }
                 VehiclePropertyIds.GEAR_SELECTION ->
                     (value.value as? Int)?.let { onGear(toGear(it)) }
                 VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE ->
@@ -47,7 +50,9 @@ class CarPropertySource(
             (c.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager)?.also { manager = it }
         } ?: return
 
-        register(m, VehiclePropertyIds.PERF_VEHICLE_SPEED, 5f)
+        // 고정 Hz(5f) 요청은 이 차종의 PERF_VEHICLE_SPEED 지원 범위와 안 맞으면 조용히
+        // 첫 값만 받고 이후 갱신이 끊길 수 있어서, "지원하는 한 가장 빠르게"로 바꾼다.
+        register(m, VehiclePropertyIds.PERF_VEHICLE_SPEED, CarPropertyManager.SENSOR_RATE_FASTEST)
         register(m, VehiclePropertyIds.GEAR_SELECTION, CarPropertyManager.SENSOR_RATE_ONCHANGE)
         register(m, VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE, CarPropertyManager.SENSOR_RATE_ONCHANGE)
     }
@@ -55,7 +60,11 @@ class CarPropertySource(
     private fun register(m: CarPropertyManager, id: Int, rate: Float) {
         if (id in registered) return
         try {
-            if (m.registerCallback(callback, id, rate)) registered += id
+            if (m.registerCallback(callback, id, rate)) {
+                registered += id
+            } else {
+                Log.w(tag, "registerCallback returned false for $id (rate=$rate)")
+            }
         } catch (e: SecurityException) {
             Log.w(tag, "no permission for $id")
         } catch (e: Exception) {

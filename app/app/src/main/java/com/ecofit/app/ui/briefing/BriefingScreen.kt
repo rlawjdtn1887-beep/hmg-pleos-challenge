@@ -43,10 +43,18 @@ fun BriefingScreen() {
     val outside = snap.outsideTempC
     val hvacOn = snap.hvacOn == true
     val seatHeat = (snap.driverSeatHeatLevel ?: 0) > 0
+    val passengerSeatHeat = (snap.passengerSeatHeatLevel ?: 0) > 0
+    val coldHvacOn = outside != null && outside < 12f && hvacOn
 
     val tips = buildList {
-        if (outside != null && outside < 12f && hvacOn && !seatHeat)
-            add("히터 대신 시트 열선을 켜면 약 8km 더 갈 수 있어요")
+        when {
+            coldHvacOn && !seatHeat && !passengerSeatHeat ->
+                add("히터 대신 운전석·조수석 열선을 켜면 약 10km 더 갈 수 있어요")
+            coldHvacOn && !seatHeat ->
+                add("히터 대신 운전석 열선을 켜면 약 8km 더 갈 수 있어요")
+            coldHvacOn && !passengerSeatHeat ->
+                add("조수석 열선을 켜고 난방 온도를 낮추면 동승자도 더 아낄 수 있어요")
+        }
         if (margin != null && margin < 0f)
             add("이대로는 ${(-margin).fmt(0)}km 모자라요. 경로에 충전소를 넣어주세요")
         else if (low)
@@ -109,7 +117,8 @@ fun BriefingScreen() {
                         "공조 " + if (hvacOn) "${snap.hvacTargetTempC?.fmt(0) ?: "—"}°C" else "꺼짐",
                         fontSize = 32.sp, fontWeight = FontWeight.Bold,
                     )
-                    Text("열선 " + if (seatHeat) "켜짐" else "꺼짐", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    Text("운전석 열선 " + if (seatHeat) "켜짐" else "꺼짐", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("조수석 열선 " + if (passengerSeatHeat) "켜짐" else "꺼짐", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {

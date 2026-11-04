@@ -40,6 +40,7 @@ import com.ecofit.app.ui.ProgressBar
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
@@ -135,7 +136,10 @@ fun DriveScreen() {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                        Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        Text(
+                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점 · 소모 ${(trip.usedKwh * 1000).fmt(0)}Wh",
+                            fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
                     }
                 }
             }
