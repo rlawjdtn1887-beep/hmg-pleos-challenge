@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // 심사용 데모 주행. 정해진 대본대로 한 번 달리고 P로 끝난다.
-// 가속, 긴 회생, 급제동 한 번, 정차까지 2분 안에 전부 나온다.
+// 가속, 긴 회생, 급제동 한 번, 정차까지 약 45초 안에 전부 나온다.
 class DemoVehicleRepository(
     private val onFinished: () -> Unit,
 ) : VehicleRepository {
@@ -48,21 +48,20 @@ class DemoVehicleRepository(
 
     // (구간 길이 초, 목표 속도, 브레이크) 순서. 속도는 구간 안에서 선형으로 바뀐다.
     private val script = listOf(
-        Step(3, 0f, 0f, Gear.P),
-        Step(2, 0f, 0f, Gear.D),
-        Step(10, 50f, 0f, Gear.D),
-        Step(8, 50f, 0f, Gear.D),
-        Step(12, 15f, 40f, Gear.D),
-        Step(10, 70f, 0f, Gear.D),
-        Step(8, 70f, 0f, Gear.D),
+        Step(2, 0f, 0f, Gear.P),
+        Step(1, 0f, 0f, Gear.D),
+        Step(5, 55f, 0f, Gear.D),
+        Step(3, 55f, 0f, Gear.D),
+        Step(7, 15f, 40f, Gear.D),
+        Step(5, 70f, 0f, Gear.D),
+        Step(2, 70f, 0f, Gear.D),
         Step(3, 20f, 100f, Gear.D),
-        Step(4, 20f, 0f, Gear.D),
-        Step(10, 65f, 0f, Gear.D),
-        Step(14, 10f, 35f, Gear.D),
-        Step(8, 45f, 0f, Gear.D),
-        Step(12, 0f, 30f, Gear.D),
-        Step(3, 0f, 0f, Gear.D),
-        Step(3, 0f, 0f, Gear.P),
+        Step(2, 20f, 0f, Gear.D),
+        Step(4, 60f, 0f, Gear.D),
+        Step(6, 5f, 35f, Gear.D),
+        Step(3, 0f, 30f, Gear.D),
+        Step(1, 0f, 0f, Gear.D),
+        Step(2, 0f, 0f, Gear.P),
     )
 
     private class Step(val sec: Int, val targetKmh: Float, val brake: Float, val gear: Gear)
