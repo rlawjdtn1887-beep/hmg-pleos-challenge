@@ -115,7 +115,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         }
         val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
         val tipsPart = tips.joinToString(". ") { it.text }
-        app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "))
+        app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "), interrupt = true)
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {

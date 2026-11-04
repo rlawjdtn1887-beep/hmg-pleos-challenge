@@ -42,6 +42,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
+import com.ecofit.app.domain.Coaching
 import com.ecofit.app.domain.RegenHistory
 import com.ecofit.app.data.model.Gear
 import com.ecofit.app.ui.Amount
@@ -109,8 +110,19 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         if (gained >= 1) {
             popupWon = gained
             popupVisible = true
-            // 운전 중엔 화면을 보기 어려우니 팝업과 같은 타이밍에 음성으로도 알려준다
-            app.ttsRepo.speak("${gained}원 아꼈어요")
+        }
+    }
+    // 운전 중 음성은 고쳐야 할 게 있을 때만. 급제동이 잡히면 바로 말하고 15초 안엔 다시 안 한다
+    LaunchedEffect(hardBrake) {
+        if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000)
+    }
+    // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다
+    var lowBatterySpoken by remember { mutableStateOf(false) }
+    LaunchedEffect(trip.active) { if (!trip.active) lowBatterySpoken = false }
+    LaunchedEffect(snap.batterySocPercent) {
+        if (trip.active && !lowBatterySpoken && Coaching.isLowBattery(snap.batterySocPercent)) {
+            lowBatterySpoken = true
+            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true)
         }
     }
     LaunchedEffect(popupVisible, popupWon) {
