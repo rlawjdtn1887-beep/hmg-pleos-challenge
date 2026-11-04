@@ -53,6 +53,7 @@ import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
+import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
@@ -129,7 +130,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.weight(2f).fillMaxHeight()) {
+                Box(Modifier.weight(2f).fillMaxHeight().tourTarget("drive.savings")) {
                     // 가속 페달을 떼서 회생이 시작되는 순간 테두리가 은은하게 빛난다
                     val regenBorderAlpha by animateFloatAsState(if (braking) 1f else 0f, label = "regenBorder")
                     Tile(

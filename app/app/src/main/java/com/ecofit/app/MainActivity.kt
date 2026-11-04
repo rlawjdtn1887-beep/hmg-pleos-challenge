@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,8 @@ import com.ecofit.app.ui.theme.EcoFitTheme
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
 import com.ecofit.app.ui.theme.Paper
+import com.ecofit.app.ui.tour.Tour
+import com.ecofit.app.ui.tour.TourOverlay
 
 class MainActivity : ComponentActivity() {
 
@@ -96,6 +99,16 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
     var asked by remember { mutableStateOf(false) }
     var prevGear by remember { mutableStateOf<Gear?>(null) }
     var showOnboarding by remember { mutableStateOf(!OnboardingPrefs.hasSeen(EcoFitApp.instance)) }
+    val context = LocalContext.current
+
+    // 안내 투어 단계마다 해당 화면으로 옮겨 준다
+    LaunchedEffect(Tour.step) {
+        val route = Tour.current?.route ?: return@LaunchedEffect
+        if (current != route) nav.navigate(route) {
+            launchSingleTop = true
+            popUpTo("home")
+        }
+    }
 
     // P에 있을 때 한 번만 권한을 묻는다
     LaunchedEffect(snap.gear) {
@@ -205,11 +218,17 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
             }
         }
 
+        if (Tour.active) {
+            TourOverlay(onFinish = { Tour.finish(context) }, onNext = { Tour.next(context) })
+        }
+
         if (showOnboarding) {
             OnboardingScreen(
                 onStart = {
                     OnboardingPrefs.markSeen(EcoFitApp.instance)
                     showOnboarding = false
+                    // 소개를 보고 시작하면 화면을 하나씩 짚어 주는 투어로 이어진다
+                    Tour.startIfFirstRun(context)
                 },
                 onDemo = {
                     OnboardingPrefs.markSeen(EcoFitApp.instance)
