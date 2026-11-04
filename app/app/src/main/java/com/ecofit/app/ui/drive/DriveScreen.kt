@@ -33,7 +33,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
+import com.ecofit.app.data.local.toModel
+import com.ecofit.app.domain.RegenHistory
 import com.ecofit.app.data.model.Gear
 import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.ProgressBar
@@ -41,13 +46,18 @@ import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.comfortScore
+import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
+import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
 import com.ecofit.app.ui.theme.Paper
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
 
 // SavingsCalculator 단가와 같게 유지
@@ -57,14 +67,26 @@ private const val TARGET_KWH = 0.3f
 private const val EPISODE_END_MS = 1500L
 private const val POPUP_MS = 2500L
 
+class DriveViewModel : ViewModel() {
+    private val app = EcoFitApp.instance
+
+    // 직전 주행의 km당 금액. 같은 거리에서 얼마나 더 아끼는지 비교하는 기준
+    val lastWonPerKm = app.db.tripDao().observeLatest()
+        .map { RegenHistory.wonPerKm(it?.toModel(), WON_PER_KWH) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+}
+
 // 누적은 TripRecorder가 하고 이 화면은 보여주기만 한다
 @Composable
-fun DriveScreen() {
+fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val app = EcoFitApp.instance
     val snap by app.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     val trip by app.recorder.live.collectAsStateWithLifecycle()
+    val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
 
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
+    // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
+    val vsLast = lastWonPerKm?.takeIf { trip.distanceKm >= 0.1f }?.let { won - (it * trip.distanceKm).roundToInt() }
     val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
     // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다
     val braking = (snap.brakePedalPercent ?: 0f) > 10f
@@ -109,7 +131,8 @@ fun DriveScreen() {
                         ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh",
+                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
+                                (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
                             fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -134,7 +157,7 @@ fun DriveScreen() {
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                     TileLabel("이번 주행")
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점 · 소모 ${(trip.usedKwh * 1000).fmt(0)}Wh",

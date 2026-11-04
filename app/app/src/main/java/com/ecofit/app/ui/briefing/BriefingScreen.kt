@@ -14,7 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
+import com.ecofit.app.data.local.toModel
+import com.ecofit.app.domain.RegenHistory
 import com.ecofit.app.data.model.DriveMode
 import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.Tile
@@ -23,14 +28,30 @@ import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
+import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlin.math.roundToInt
 
 private const val LOW_MARGIN_KM = 30f
+private const val WON_PER_KWH = 350f
+
+class BriefingViewModel : ViewModel() {
+    private val app = EcoFitApp.instance
+
+    // 지난 주행 평균으로 이 경로에서 얼마나 아낄지 가늠한다
+    val wonPerKm = app.db.tripDao().observeAll()
+        .map { list -> RegenHistory.wonPerKm(list.map { it.toModel() }, WON_PER_KWH) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+}
 
 @Composable
-fun BriefingScreen() {
+fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val app = EcoFitApp.instance
     val snap by app.vehicleRepo.snapshot.collectAsStateWithLifecycle()
+    val wonPerKm by vm.wonPerKm.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
     val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
 
@@ -39,6 +60,10 @@ fun BriefingScreen() {
     val dest = destKm?.takeIf { it > 0f }
     val margin = if (range != null && dest != null) range - dest else null
     val low = margin != null && margin < LOW_MARGIN_KM
+    val expectedWon = dest?.let { ((wonPerKm ?: RegenHistory.DEFAULT_WON_PER_KM) * it).roundToInt() }
+    val expectedText = expectedWon?.let {
+        "이 경로에서 약 ${"%,d".format(it)}원 아낄 수 있어요" + if (wonPerKm == null) " (기본값 기준)" else ""
+    }
 
     val outside = snap.outsideTempC
     val hvacOn = snap.hvacOn == true
@@ -80,6 +105,7 @@ fun BriefingScreen() {
                         Column {
                             Amount(dest.fmt(0), "km", 150.sp)
                             Text("남은 주행거리 확인 중", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                            expectedText?.let { Text(it, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
                         }
                     }
                     else -> {
@@ -93,6 +119,9 @@ fun BriefingScreen() {
                                 "목적지 ${dest.fmt(0)}km" + (etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             )
+                            expectedText?.let {
+                                Text(it, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (low) Ice else Ink)
+                            }
                         }
                     }
                 }
