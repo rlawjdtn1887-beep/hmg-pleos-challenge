@@ -149,7 +149,9 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             )
                         }
                     }
-                    AnimatedVisibility(
+                    // Row 안의 Box라 implicit receiver가 겹쳐서 RowScope.AnimatedVisibility로 잘못 resolve됨.
+                    // 명시적으로 top-level 함수를 가리켜서 그 모호성을 없앤다
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = braking,
                         modifier = Modifier.align(Alignment.TopEnd).padding(24.dp),
                         enter = fadeIn(), exit = fadeOut(),
