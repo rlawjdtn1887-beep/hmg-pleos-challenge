@@ -191,3 +191,6 @@ fun countUp(target: Int): Int {
     )
     return v
 }
+
+// 1분 미만이면 초로, 그 이상이면 분으로
+fun Long.durationText(): String = if (this < 60) "${this}초" else "${this / 60}분"

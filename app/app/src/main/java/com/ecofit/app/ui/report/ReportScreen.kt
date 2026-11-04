@@ -50,6 +50,7 @@ import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.countUp
+import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
@@ -112,7 +113,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분 · 되찾은 에너지 ${regenWh}Wh" +
+                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
                             (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
                         fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                     )

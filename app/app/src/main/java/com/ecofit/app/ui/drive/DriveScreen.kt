@@ -45,6 +45,7 @@ import com.ecofit.app.ui.ProgressBar
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
@@ -155,7 +156,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                     TileLabel("이번 주행")
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec / 60}분", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
                     }
