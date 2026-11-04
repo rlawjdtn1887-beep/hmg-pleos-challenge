@@ -38,6 +38,7 @@ import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Ice
@@ -91,7 +92,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("이번 주 회생 제동으로 아낀 전기요금")
                 Column {
-                    Amount("%,d".format(s.savedWon), "원", 150.sp)
+                    Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (tripCount == 0) "주행을 시작하면 여기에 쌓여요" else "이번 주 주행 ${tripCount}회",
@@ -124,7 +125,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Amount(avgScore?.toString() ?: "—", "점", 92.sp)
+                        Amount(avgScore?.let { "${countUp(it)}" } ?: "—", "점", 92.sp)
                         Text(
                             avgScore?.let { EcoScore.label(it) } ?: "첫 주행을 기다려요",
                             fontSize = 24.sp, fontWeight = FontWeight.Bold, color = InkMuted,

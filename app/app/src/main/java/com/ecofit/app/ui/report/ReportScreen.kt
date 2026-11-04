@@ -37,6 +37,7 @@ import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class ReportViewModel : ViewModel() {
     private val app = EcoFitApp.instance
@@ -98,7 +100,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel("방금 끝난 주행 · ${timeFmt.format(Date(latest.startTimeMs))}\n회생 제동으로 아낀 돈")
                 Column {
-                    Amount("%,d".format(s.savedWon), "원", 150.sp)
+                    Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${latest.distanceKm.fmt(1)}km · ${latest.durationSec / 60}분 · 되찾은 에너지 ${regenWh}Wh" +
@@ -116,7 +118,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Amount("$score", "점", 92.sp)
+                        Amount("${countUp(score)}", "점", 92.sp)
                         Text(EcoScore.label(score), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = InkMuted)
                     }
                 }
@@ -131,7 +133,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("되찾은 에너지", color = Ice)
                 Column {
-                    Amount(regenWh, "Wh", 88.sp)
+                    Amount("${countUp((s.regenKwh * 1000).roundToInt())}", "Wh", 88.sp)
                     Spacer(Modifier.height(14.dp))
                     ProgressBar(s.regenKwh / TARGET_KWH, track = Ice.copy(alpha = 0.18f), fill = Ice)
                     Spacer(Modifier.height(10.dp))
