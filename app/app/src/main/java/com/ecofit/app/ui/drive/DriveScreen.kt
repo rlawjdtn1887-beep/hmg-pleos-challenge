@@ -108,6 +108,8 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         if (gained >= 1) {
             popupWon = gained
             popupVisible = true
+            // 운전 중엔 화면을 보기 어려우니 팝업과 같은 타이밍에 음성으로도 알려준다
+            app.ttsRepo.speak("${gained}원 아꼈어요")
         }
     }
     LaunchedEffect(popupVisible, popupWon) {
@@ -122,6 +124,10 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         hardBrake -> "급제동이에요\n조금 더 일찍 페달을 떼보세요"
         braking -> "회생 중이에요\n페달을 부드럽게 유지하세요"
         else -> "앞차와 거리를 두고\n가속 페달을 떼면 회생이 시작돼요"
+    }
+    // 코칭 문구가 바뀔 때만 말한다. 같은 문구가 유지되는 동안은 재생하지 않음
+    LaunchedEffect(coach) {
+        app.ttsRepo.speak(coach.replace("\n", " "))
     }
 
     Box(Modifier.fillMaxSize()) {

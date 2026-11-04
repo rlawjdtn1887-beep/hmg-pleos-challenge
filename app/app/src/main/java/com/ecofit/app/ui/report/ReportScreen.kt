@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +100,18 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     }
 
     val latest = trips.first()
+
+    // 방금 끝난 주행 결과를 음성으로 요약. latest가 바뀔 때만(= 새 주행이 끝났을 때만) 말하고,
+    // 그래프에서 지난 주행을 눌러봐도(selectedStartTimeMs 변경) 다시 말하지 않는다
+    LaunchedEffect(latest.startTimeMs) {
+        val ls = vm.savings(latest)
+        val tip = if (latest.hardBrakeCount > 0) "급제동 ${latest.hardBrakeCount}번 있었어요" else "급제동 없이 부드럽게 달렸어요"
+        app.ttsRepo.speak(
+            "${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원을 아꼈어요. " +
+                "에코 점수 ${EcoScore.of(latest)}점, $tip."
+        )
+    }
+
     // 리포트 그래프 막대를 눌러서 그 주행을 대신 보여준다. null이면 방금 끝난 주행
     var selectedStartTimeMs by remember { mutableStateOf<Long?>(null) }
     val shown = selectedStartTimeMs?.let { ms -> trips.find { it.startTimeMs == ms } } ?: latest

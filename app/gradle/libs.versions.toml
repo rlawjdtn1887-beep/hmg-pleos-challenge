@@ -11,6 +11,7 @@ room = "2.6.1"
 coroutines = "1.8.1"
 vehicleSdk = "2.3.2"
 naviHelperSdk = "3.0.5"
+ttsSdk = "3.3.1"
 junit = "4.13.2"
 
 [libraries]
@@ -33,6 +34,7 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 vehicle-sdk = { module = "ai.pleos.playground:Vehicle", version.ref = "vehicleSdk" }
 navihelper-sdk = { module = "ai.pleos.playground:NaviHelper", version.ref = "naviHelperSdk" }
+tts-sdk = { module = "ai.pleos.playground:TextToSpeech", version.ref = "ttsSdk" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
