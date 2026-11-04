@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,6 +118,7 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
             !driving && wasDriving && g == Gear.P -> "report"
             else -> null
         }
+        if (target == "drive") EcoFitApp.instance.ttsRepo.speak("주행을 시작해요")
         if (target != null && current != target) {
             nav.navigate(target) {
                 launchSingleTop = true
@@ -174,6 +177,24 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
                         )
                     }
                 }
+
+                Spacer(Modifier.weight(1f))
+
+                val ttsEnabled by EcoFitApp.instance.ttsRepo.enabled.collectAsStateWithLifecycle()
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "음성 안내", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = ttsEnabled,
+                        onCheckedChange = { EcoFitApp.instance.ttsRepo.setEnabled(it) },
+                        colors = SwitchDefaults.colors(checkedTrackColor = Ink),
+                    )
+                }
             }
 
             NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -193,6 +214,7 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
                 onDemo = {
                     OnboardingPrefs.markSeen(EcoFitApp.instance)
                     showOnboarding = false
+                    EcoFitApp.instance.ttsRepo.speak("데모 주행을 시작합니다")
                     EcoFitApp.instance.vehicleRepo.startDemo()
                 },
             )

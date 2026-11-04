@@ -74,7 +74,12 @@ class HomeViewModel : ViewModel() {
     val isDemo = app.vehicleRepo.isDemo
 
     fun toggleDemo() {
-        if (isDemo.value) app.vehicleRepo.stopDemo() else app.vehicleRepo.startDemo()
+        if (isDemo.value) {
+            app.vehicleRepo.stopDemo()
+        } else {
+            app.ttsRepo.speak("데모 주행을 시작합니다")
+            app.vehicleRepo.startDemo()
+        }
     }
 }
 

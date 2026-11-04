@@ -7,6 +7,12 @@ import ai.pleos.playground.tts.listener.OnInitializeListener
 import android.content.Context
 import android.util.Log
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+private const val PREFS_NAME = "ecofit_prefs"
+private const val KEY_TTS_ENABLED = "tts_enabled"
 
 /**
  * TextToSpeech SDK 연동. 담당: 정수
@@ -22,6 +28,16 @@ class TtsRepository(context: Context) {
     private val tag = "TtsRepository"
     private val tts = TextToSpeech(context.applicationContext, Mode.ON_DEVICE)
     private var ready = false
+
+    private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val _enabled = MutableStateFlow(prefs.getBoolean(KEY_TTS_ENABLED, true))
+    val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
+
+    fun setEnabled(value: Boolean) {
+        _enabled.value = value
+        prefs.edit().putBoolean(KEY_TTS_ENABLED, value).apply()
+        if (!value) tts.stop()
+    }
 
     fun start() {
         tts.initialize(object : OnInitializeListener {
@@ -42,7 +58,7 @@ class TtsRepository(context: Context) {
     }
 
     fun speak(text: String) {
-        if (!ready) return
+        if (!ready || !_enabled.value) return
         tts.speak(text, true)
     }
 
