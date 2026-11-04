@@ -56,6 +56,9 @@ import kotlin.math.roundToInt
 
 private const val WEEKS_PER_YEAR = 52
 
+// 인사는 앱을 켠 뒤 한 번만
+private var greeted = false
+
 data class WeeklySummary(val tripCount: Int, val savings: TripSavings, val avgScore: Int?)
 
 class HomeViewModel : ViewModel() {
@@ -95,26 +98,25 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
     val soc = snap.batterySocPercent
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
 
-    // 홈 탭에 들어올 때 한 번, 이번 주 아낀 돈·에코 점수·전비 비교·1년 환산을 음성으로 요약한다.
-    // weekly는 Room 쿼리가 끝나기 전엔 초기값(0건)부터 시작하는데, 그 순간 값을 그대로 읽으면
-    // 실제론 주행 기록이 있어도 "기록이 없다"고 잘못 말해버린다. 짧게 기다렸다가 StateFlow의
-    // 최신 값을 다시 읽어서 그 레이스를 피한다
+    // 앱을 켠 뒤 처음 홈에 왔을 때 한 번만 인사한다. weekly는 Room 쿼리가 끝나기 전엔
+    // 초기값(0건)이라 잠깐 기다렸다가 최신 값을 읽는다
     LaunchedEffect(Unit) {
-        val app = EcoFitApp.instance
+        if (greeted) return@LaunchedEffect
+        greeted = true
         delay(400)
         val w = vm.weekly.value
-        val ws = w.savings
-        val text = if (w.tripCount == 0) {
-            "아직 이번 주 주행 기록이 없어요. 주행을 시작하면 아낀 돈이 여기 쌓여요."
-        } else {
-            val scorePart = w.avgScore?.let {
-                "에코 점수 ${it}점이에요." + (ws.vsBaselinePercent?.let { p -> " 기준 전비보다 ${p.signed()}%예요." } ?: "")
-            }.orEmpty()
-            val annualWon = ws.savedWon * WEEKS_PER_YEAR
-            "이번 주 주행 ${w.tripCount}회, 회생 제동으로 ${"%,d".format(ws.savedWon)}원 아꼈어요. $scorePart " +
-                "이대로 달리면 1년에 약 ${"%,d".format(annualWon)}원 아낄 수 있어요."
+        val hello = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+            in 5..10 -> "좋은 아침이에요."
+            in 11..16 -> "좋은 오후예요."
+            in 17..21 -> "좋은 저녁이에요."
+            else -> "안녕하세요."
         }
-        app.ttsRepo.speak(text)
+        val text = if (w.tripCount == 0) {
+            "$hello 에코핏이 회생 제동을 기록할게요."
+        } else {
+            "$hello 이번 주 ${"%,d".format(w.savings.savedWon)}원 아꼈어요. 오늘도 부드럽게 출발해요."
+        }
+        EcoFitApp.instance.ttsRepo.speak(text)
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {

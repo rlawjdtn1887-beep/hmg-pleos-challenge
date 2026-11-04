@@ -46,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
 import com.ecofit.app.data.model.TripData
+import com.ecofit.app.domain.Coaching
 import com.ecofit.app.domain.EcoScore
 import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.EcoLogo
@@ -106,10 +107,17 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     // 그래프에서 지난 주행을 눌러봐도(selectedStartTimeMs 변경) 다시 말하지 않는다
     LaunchedEffect(latest.startTimeMs) {
         val ls = vm.savings(latest)
-        val tip = if (latest.hardBrakeCount > 0) "급제동 ${latest.hardBrakeCount}번 있었어요" else "급제동 없이 부드럽게 달렸어요"
+        val extraKm = Coaching.extraKmWithoutHardBrakes(latest)
+        val tip = if (latest.hardBrakeCount > 0)
+            "급제동 ${latest.hardBrakeCount}번이 없었다면 약 ${extraKm.fmt(1)}킬로미터 더 갈 수 있었어요"
+        else
+            "급제동 없이 부드럽게 달렸어요"
+        val charge = if (Coaching.isLowBattery(latest.endSocPercent)) " 배터리가 부족해요. 충전소 찾기를 눌러 주세요." else ""
+        // 주행이 끝났을 때 하는 요약이라 말하던 게 있어도 끊고 말한다
         app.ttsRepo.speak(
-            "${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원을 아꼈어요. " +
-                "에코 점수 ${EcoScore.of(latest)}점, $tip."
+            "주행이 끝났어요. ${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원을 아꼈어요. " +
+                "에코 점수 ${EcoScore.of(latest)}점, $tip.$charge",
+            interrupt = true,
         )
     }
 
@@ -124,7 +132,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
 
     val regenWh = (s.regenKwh * 1000).fmt(0)
     val coachTip = if (shown.hardBrakeCount > 0)
-        "급제동 ${shown.hardBrakeCount}회 · 조금 일찍 떼면 더 아낄 수 있어요"
+        "급제동 ${shown.hardBrakeCount}회 · 없었다면 약 ${Coaching.extraKmWithoutHardBrakes(shown).fmt(1)}km 더 갈 수 있었어요"
     else
         "급제동 없이 부드럽게 달렸어요 · 이대로 유지하세요"
 
@@ -138,11 +146,29 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                 Column {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "${shown.distanceKm.fmt(1)}km · ${shown.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
-                            (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
-                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${shown.distanceKm.fmt(1)}km · ${shown.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
+                                (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
+                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 배터리가 적게 남은 채로 끝났으면 바로 충전소를 찾게 한다
+                        if (Coaching.isLowBattery(shown.endSocPercent)) {
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Ink)
+                                    .clickable {
+                                        app.ttsRepo.speak("근처 충전소를 찾아드릴게요", interrupt = true)
+                                        app.naviRepo.showNearbyChargingStations()
+                                    }
+                                    .padding(horizontal = 22.dp, vertical = 12.dp),
+                            ) {
+                                Text("⚡ 충전소 찾기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ice)
+                            }
+                        }
+                    }
                 }
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight().tourTarget("report.score")) {
