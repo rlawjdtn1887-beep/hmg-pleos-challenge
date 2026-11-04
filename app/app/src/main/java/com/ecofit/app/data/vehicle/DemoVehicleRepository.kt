@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import kotlin.random.Random
 
 // 심사용 데모 주행. 정해진 대본대로 한 번 달리고 P로 끝난다.
 // 가속, 긴 회생, 급제동 한 번, 정차까지 약 45초 안에 전부 나온다.
@@ -36,9 +38,10 @@ class DemoVehicleRepository(
             driveMode = DriveMode.ECO,
             hvacOn = true,
             hvacTargetTempC = 22f,
-            outsideTempC = 14f,
+            outsideTempC = 8f,
             fanSpeed = 2,
             driverSeatHeatLevel = 0,
+            passengerSeatHeatLevel = 0,
         )
     )
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
@@ -64,14 +67,23 @@ class DemoVehicleRepository(
         Step(2, 0f, 0f, Gear.P),
     )
 
-    private class Step(val sec: Int, val targetKmh: Float, val brake: Float, val gear: Gear)
+    private class Step(val sec: Int, val targetKmh: Float, val brake: Float, val gear: Gear) {
+        // 매번 똑같이 재생되면 리포트에 똑같은 숫자만 쌓여서 지난 주행 비교가 의미 없어진다.
+        // 구간 길이·목표 속도를 ±15% 흔들어서 실행마다 거리·급제동 여부·회생량이 달라지게 한다
+        fun jittered(): Step {
+            val speedF = Random.nextFloat() * 0.3f + 0.85f
+            val secF = Random.nextFloat() * 0.3f + 0.85f
+            return Step((sec * secF).roundToInt().coerceAtLeast(1), targetKmh * speedF, brake, gear)
+        }
+    }
 
     override fun start() {
         if (job?.isActive == true) return
         _isConnected.value = true
+        val runScript = script.map { it.jittered() }
         job = scope.launch {
             var speed = 0f
-            for (step in script) {
+            for (step in runScript) {
                 val from = speed
                 val ticks = step.sec * TICKS_PER_SEC
                 for (i in 1..ticks) {

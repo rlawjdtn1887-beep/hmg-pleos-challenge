@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +49,7 @@ import com.ecofit.app.ui.ProgressBar
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
+import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
@@ -103,6 +108,8 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         if (gained >= 1) {
             popupWon = gained
             popupVisible = true
+            // 운전 중엔 화면을 보기 어려우니 팝업과 같은 타이밍에 음성으로도 알려준다
+            app.ttsRepo.speak("${gained}원 아꼈어요")
         }
     }
     LaunchedEffect(popupVisible, popupWon) {
@@ -122,18 +129,46 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
-                    TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
-                    Column {
-                        Amount("%,d".format(won), "원", 150.sp)
-                        Spacer(Modifier.height(16.dp))
-                        ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
-                                (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
-                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                        )
+                Box(Modifier.weight(2f).fillMaxHeight()) {
+                    // 가속 페달을 떼서 회생이 시작되는 순간 테두리가 은은하게 빛난다
+                    val regenBorderAlpha by animateFloatAsState(if (braking) 1f else 0f, label = "regenBorder")
+                    Tile(
+                        TileTone.Accent,
+                        Modifier
+                            .fillMaxSize()
+                            .border(3.dp, Ink.copy(alpha = regenBorderAlpha * 0.8f), RoundedCornerShape(28.dp)),
+                    ) {
+                        TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                        Column {
+                            Amount("%,d".format(won), "원", 150.sp)
+                            Spacer(Modifier.height(16.dp))
+                            ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
+                                    (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
+                                fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    // Row 안의 Box라 implicit receiver가 겹쳐서 RowScope.AnimatedVisibility로 잘못 resolve됨.
+                    // 명시적으로 top-level 함수를 가리켜서 그 모호성을 없앤다
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = braking,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(24.dp),
+                        enter = fadeIn(), exit = fadeOut(),
+                    ) {
+                        Row(
+                            Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Ink.copy(alpha = 0.12f))
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(Modifier.size(10.dp).clip(CircleShape).background(Ink))
+                            Spacer(Modifier.width(8.dp))
+                            Text("회생 중", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
+                        }
                     }
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
@@ -158,7 +193,10 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                        Text("소모 ${(trip.usedKwh * 1000).fmt(0)}Wh", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        Text(
+                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점 · 소모 ${(trip.usedKwh * 1000).fmt(0)}Wh",
+                            fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
                     }
                 }
             }

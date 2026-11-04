@@ -4,6 +4,7 @@ import android.app.Application
 import com.ecofit.app.data.local.EcoFitDatabase
 import com.ecofit.app.data.local.toEntity
 import com.ecofit.app.data.navi.NaviRepository
+import com.ecofit.app.data.tts.TtsRepository
 import com.ecofit.app.data.vehicle.FakeVehicleRepository
 import com.ecofit.app.data.vehicle.PleosVehicleRepository
 import com.ecofit.app.data.vehicle.SwitchableVehicleRepository
@@ -31,6 +32,8 @@ class EcoFitApp : Application() {
         private set
     lateinit var naviRepo: NaviRepository
         private set
+    lateinit var ttsRepo: TtsRepository
+        private set
     lateinit var db: EcoFitDatabase
         private set
     val savings = SavingsCalculator()
@@ -46,6 +49,8 @@ class EcoFitApp : Application() {
         vehicleRepo.start()
         naviRepo = NaviRepository(this)
         naviRepo.start()
+        ttsRepo = TtsRepository(this)
+        ttsRepo.start()
 
         appScope.launch {
             vehicleRepo.snapshot.collect { s ->

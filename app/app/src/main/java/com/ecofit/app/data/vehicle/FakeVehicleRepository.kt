@@ -45,6 +45,7 @@ class FakeVehicleRepository(
             outsideTempC = 8f,
             fanSpeed = 3,
             driverSeatHeatLevel = 0,
+            passengerSeatHeatLevel = 2,
             odometerKm = 12_430f,
             tripDistanceKm = 0f,
             tripDurationSec = 0,

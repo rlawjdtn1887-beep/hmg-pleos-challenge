@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +46,8 @@ import com.ecofit.app.ui.EcoLogo
 import com.ecofit.app.ui.briefing.BriefingScreen
 import com.ecofit.app.ui.drive.DriveScreen
 import com.ecofit.app.ui.home.HomeScreen
+import com.ecofit.app.ui.onboarding.OnboardingPrefs
+import com.ecofit.app.ui.onboarding.OnboardingScreen
 import com.ecofit.app.ui.report.ReportScreen
 import com.ecofit.app.ui.theme.Black
 import com.ecofit.app.ui.theme.EcoFitTheme
@@ -91,6 +95,7 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
     val snap by EcoFitApp.instance.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     var asked by remember { mutableStateOf(false) }
     var prevGear by remember { mutableStateOf<Gear?>(null) }
+    var showOnboarding by remember { mutableStateOf(!OnboardingPrefs.hasSeen(EcoFitApp.instance)) }
 
     // P에 있을 때 한 번만 권한을 묻는다
     LaunchedEffect(snap.gear) {
@@ -113,6 +118,7 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
             !driving && wasDriving && g == Gear.P -> "report"
             else -> null
         }
+        if (target == "drive") EcoFitApp.instance.ttsRepo.speak("주행을 시작해요")
         if (target != null && current != target) {
             nav.navigate(target) {
                 launchSingleTop = true
@@ -121,62 +127,97 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
         }
     }
 
-    Row(
-        Modifier.fillMaxSize().background(Black).padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Column(
-            Modifier
-                .width(270.dp)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Paper)
-                .padding(horizontal = 14.dp, vertical = 26.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Box(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxSize().background(Black).padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(
-                Modifier.padding(start = 10.dp, bottom = 22.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                Modifier
+                    .width(270.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Paper)
+                    .padding(horizontal = 14.dp, vertical = 26.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                EcoLogo(60.dp)
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text("EcoFit", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
-                    Text("회생 제동 코치", fontSize = 19.sp, color = InkMuted)
+                Row(
+                    Modifier.padding(start = 10.dp, bottom = 22.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    EcoLogo(60.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text("EcoFit", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                        Text("회생 제동 코치", fontSize = 19.sp, color = InkMuted)
+                    }
                 }
-            }
-            dests.forEach { d ->
-                val selected = current == d.route
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(84.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(if (selected) Ink else Color.Transparent)
-                        .clickable(role = Role.Tab) {
-                            if (!selected) nav.navigate(d.route) {
-                                launchSingleTop = true
-                                popUpTo("home")
+                dests.forEach { d ->
+                    val selected = current == d.route
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(84.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(if (selected) Ink else Color.Transparent)
+                            .clickable(role = Role.Tab) {
+                                if (!selected) nav.navigate(d.route) {
+                                    launchSingleTop = true
+                                    popUpTo("home")
+                                }
                             }
-                        }
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.CenterStart,
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            d.label,
+                            fontSize = 30.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (selected) Paper else InkMuted,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                val ttsEnabled by EcoFitApp.instance.ttsRepo.enabled.collectAsStateWithLifecycle()
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        d.label,
-                        fontSize = 30.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                        color = if (selected) Paper else InkMuted,
+                        "음성 안내", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = ttsEnabled,
+                        onCheckedChange = { EcoFitApp.instance.ttsRepo.setEnabled(it) },
+                        colors = SwitchDefaults.colors(checkedTrackColor = Ink),
                     )
                 }
             }
+
+            NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f).fillMaxHeight()) {
+                composable("home") { HomeScreen() }
+                composable("briefing") { BriefingScreen() }
+                composable("drive") { DriveScreen() }
+                composable("report") { ReportScreen() }
+            }
         }
 
-        NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f).fillMaxHeight()) {
-            composable("home") { HomeScreen() }
-            composable("briefing") { BriefingScreen() }
-            composable("drive") { DriveScreen() }
-            composable("report") { ReportScreen() }
+        if (showOnboarding) {
+            OnboardingScreen(
+                onStart = {
+                    OnboardingPrefs.markSeen(EcoFitApp.instance)
+                    showOnboarding = false
+                },
+                onDemo = {
+                    OnboardingPrefs.markSeen(EcoFitApp.instance)
+                    showOnboarding = false
+                    EcoFitApp.instance.ttsRepo.speak("데모 주행을 시작합니다")
+                    EcoFitApp.instance.vehicleRepo.startDemo()
+                },
+            )
         }
     }
 }

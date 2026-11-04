@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
 import com.ecofit.app.ui.theme.Paper
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -52,6 +54,7 @@ import kotlin.math.roundToInt
 
 // SavingsCalculator의 커피 단가와 같게 유지
 private const val COFFEE_WON = 4500
+private const val WEEKS_PER_YEAR = 52
 
 data class WeeklySummary(val tripCount: Int, val savings: TripSavings, val avgScore: Int?)
 
@@ -71,7 +74,12 @@ class HomeViewModel : ViewModel() {
     val isDemo = app.vehicleRepo.isDemo
 
     fun toggleDemo() {
-        if (isDemo.value) app.vehicleRepo.stopDemo() else app.vehicleRepo.startDemo()
+        if (isDemo.value) {
+            app.vehicleRepo.stopDemo()
+        } else {
+            app.ttsRepo.speak("데모 주행을 시작합니다")
+            app.vehicleRepo.startDemo()
+        }
     }
 }
 
@@ -86,6 +94,28 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
 
     val soc = snap.batterySocPercent
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
+
+    // 홈 탭에 들어올 때 한 번, 이번 주 아낀 돈·에코 점수·전비 비교·1년 환산을 음성으로 요약한다.
+    // weekly는 Room 쿼리가 끝나기 전엔 초기값(0건)부터 시작하는데, 그 순간 값을 그대로 읽으면
+    // 실제론 주행 기록이 있어도 "기록이 없다"고 잘못 말해버린다. 짧게 기다렸다가 StateFlow의
+    // 최신 값을 다시 읽어서 그 레이스를 피한다
+    LaunchedEffect(Unit) {
+        val app = EcoFitApp.instance
+        delay(400)
+        val w = vm.weekly.value
+        val ws = w.savings
+        val text = if (w.tripCount == 0) {
+            "아직 이번 주 주행 기록이 없어요. 주행을 시작하면 아낀 돈이 여기 쌓여요."
+        } else {
+            val scorePart = w.avgScore?.let {
+                "에코 점수 ${it}점이에요." + (ws.vsBaselinePercent?.let { p -> " 기준 전비보다 ${p.signed()}%예요." } ?: "")
+            }.orEmpty()
+            val annualWon = ws.savedWon * WEEKS_PER_YEAR
+            "이번 주 주행 ${w.tripCount}회, 회생 제동으로 ${"%,d".format(ws.savedWon)}원 아꼈어요. $scorePart " +
+                "이대로 달리면 1년에 약 ${"%,d".format(annualWon)}원 아낄 수 있어요."
+        }
+        app.ttsRepo.speak(text)
+    }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -146,17 +176,36 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 Amount(s.regenKwh.fmt(2), "kWh", 96.sp)
             }
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
-                TileLabel("이만큼이면")
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "${s.savedKm.fmt(1)}km를\n공짜로 달린 셈",
-                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 56.sp,
-                    )
-                    Text(
-                        if (s.coffeeCups >= 1f) "커피 ${s.coffeeCups.fmt(1)}잔 값"
-                        else "커피 한 잔까지 ${"%,d".format(COFFEE_WON - s.savedWon)}원",
-                        fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ice,
-                    )
+                TileLabel("이대로 달리면")
+                if (tripCount == 0) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            "아직 기록이 없어요",
+                            fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 46.sp,
+                        )
+                        Text(
+                            "주행을 시작하면 1년 환산이 여기 떠요",
+                            fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ice,
+                        )
+                    }
+                } else {
+                    // 이번 주(최근 7일) 아낀 돈을 그대로 연 단위로 늘린 값. 주행이 쌓일수록 정확해진다
+                    val annualWon = s.savedWon * WEEKS_PER_YEAR
+                    val annualCoffeeCups = annualWon / COFFEE_WON.toFloat()
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            "1년에 약\n${"%,d".format(annualWon)}원",
+                            fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 50.sp,
+                        )
+                        Text(
+                            "커피 ${annualCoffeeCups.fmt(1)}잔 값",
+                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ice,
+                        )
+                        Text(
+                            "이번 주 ${s.savedKm.fmt(1)}km를 공짜로 달린 셈",
+                            fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
+                    }
                 }
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
