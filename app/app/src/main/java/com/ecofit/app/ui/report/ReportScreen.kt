@@ -1,6 +1,7 @@
 package com.ecofit.app.ui.report
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,26 +99,33 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     }
 
     val latest = trips.first()
-    val s = vm.savings(latest)
-    val score = EcoScore.of(latest)
-    val recent = trips.take(6).reversed().map { it to vm.savings(it).savedWon }
-    val maxWon = (recent.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
+    // 리포트 그래프 막대를 눌러서 그 주행을 대신 보여준다. null이면 방금 끝난 주행
+    var selectedStartTimeMs by remember { mutableStateOf<Long?>(null) }
+    val shown = selectedStartTimeMs?.let { ms -> trips.find { it.startTimeMs == ms } } ?: latest
+    val isLatestShown = shown.startTimeMs == latest.startTimeMs
+    val s = vm.savings(shown)
+    val score = EcoScore.of(shown)
+    val recent = trips.take(6).reversed().map { Triple(it, vm.savings(it).savedWon, EcoScore.of(it)) }
+    val maxWon = (recent.maxOf { it.second }).coerceAtLeast(1)
 
     val regenWh = (s.regenKwh * 1000).fmt(0)
-    val coachTip = if (latest.hardBrakeCount > 0)
-        "급제동 ${latest.hardBrakeCount}회 · 조금 일찍 떼면 더 아낄 수 있어요"
+    val coachTip = if (shown.hardBrakeCount > 0)
+        "급제동 ${shown.hardBrakeCount}회 · 조금 일찍 떼면 더 아낄 수 있어요"
     else
         "급제동 없이 부드럽게 달렸어요 · 이대로 유지하세요"
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
-                TileLabel("방금 끝난 주행 · ${timeFmt.format(Date(latest.startTimeMs))}\n회생 제동으로 아낀 돈")
+                TileLabel(
+                    (if (isLatestShown) "방금 끝난 주행" else "선택한 주행") +
+                        " · ${timeFmt.format(Date(shown.startTimeMs))}\n회생 제동으로 아낀 돈"
+                )
                 Column {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "${latest.distanceKm.fmt(1)}km · ${latest.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
+                        "${shown.distanceKm.fmt(1)}km · ${shown.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
                             (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
                         fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                     )
@@ -134,12 +145,12 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     }
                 }
                 Text(
-                    "급제동 ${latest.hardBrakeCount}회 · 급가속 ${latest.hardAccelCount}회",
+                    "급제동 ${shown.hardBrakeCount}회 · 급가속 ${shown.hardAccelCount}회",
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
                 Text(
-                    "동승자 승차감 ${comfortScore(latest.hardBrakeCount, latest.hardAccelCount)}점",
+                    "동승자 승차감 ${comfortScore(shown.hardBrakeCount, shown.hardAccelCount)}점",
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
@@ -171,19 +182,31 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    recent.forEach { (t, won) ->
+                    recent.forEach { (t, won, tScore) ->
+                        val isSelected = t.startTimeMs == shown.startTimeMs
                         Column(
-                            Modifier.weight(1f).fillMaxHeight(),
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable { selectedStartTimeMs = t.startTimeMs },
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("${won}원", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(
+                                "${won}원", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+                                color = if (isSelected) Ice else Ink,
+                            )
+                            Text("${tScore}점", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                                 Box(
                                     Modifier
                                         .fillMaxWidth(0.55f)
                                         .fillMaxHeight((won.toFloat() / maxWon).coerceAtLeast(0.04f))
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (t == latest) Ice else Ink)
+                                        .background(if (isSelected) Ice else Ink)
+                                        .then(
+                                            if (isSelected) Modifier.border(2.dp, Ink, RoundedCornerShape(10.dp))
+                                            else Modifier
+                                        )
                                 )
                             }
                             Text(dayFmt.format(Date(t.startTimeMs)), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)

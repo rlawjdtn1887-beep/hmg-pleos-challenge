@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -123,18 +127,44 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
-                    TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
-                    Column {
-                        Amount("%,d".format(won), "원", 150.sp)
-                        Spacer(Modifier.height(16.dp))
-                        ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
-                                (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
-                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                        )
+                Box(Modifier.weight(2f).fillMaxHeight()) {
+                    // 가속 페달을 떼서 회생이 시작되는 순간 테두리가 은은하게 빛난다
+                    val regenBorderAlpha by animateFloatAsState(if (braking) 1f else 0f, label = "regenBorder")
+                    Tile(
+                        TileTone.Accent,
+                        Modifier
+                            .fillMaxSize()
+                            .border(3.dp, Ink.copy(alpha = regenBorderAlpha * 0.8f), RoundedCornerShape(28.dp)),
+                    ) {
+                        TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                        Column {
+                            Amount("%,d".format(won), "원", 150.sp)
+                            Spacer(Modifier.height(16.dp))
+                            ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
+                                    (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
+                                fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = braking,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(24.dp),
+                        enter = fadeIn(), exit = fadeOut(),
+                    ) {
+                        Row(
+                            Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Ink.copy(alpha = 0.12f))
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(Modifier.size(10.dp).clip(CircleShape).background(Ink))
+                            Spacer(Modifier.width(8.dp))
+                            Text("회생 중", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
+                        }
                     }
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {

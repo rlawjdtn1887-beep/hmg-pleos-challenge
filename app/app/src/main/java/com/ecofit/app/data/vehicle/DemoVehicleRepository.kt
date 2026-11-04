@@ -36,9 +36,10 @@ class DemoVehicleRepository(
             driveMode = DriveMode.ECO,
             hvacOn = true,
             hvacTargetTempC = 22f,
-            outsideTempC = 14f,
+            outsideTempC = 8f,
             fanSpeed = 2,
             driverSeatHeatLevel = 0,
+            passengerSeatHeatLevel = 0,
         )
     )
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
