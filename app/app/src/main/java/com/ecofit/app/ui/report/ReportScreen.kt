@@ -59,6 +59,7 @@ import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
+import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
@@ -144,7 +145,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     )
                 }
             }
-            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight().tourTarget("report.score")) {
                 TileLabel("에코 점수")
                 RingGauge(
                     fraction = score / 100f,

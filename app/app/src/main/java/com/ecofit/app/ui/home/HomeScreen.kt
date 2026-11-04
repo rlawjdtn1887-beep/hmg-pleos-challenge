@@ -32,6 +32,7 @@ import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
 import com.ecofit.app.data.model.TripData
 import com.ecofit.app.domain.EcoScore
+import com.ecofit.app.domain.MoneyUnits
 import com.ecofit.app.domain.TripSavings
 import com.ecofit.app.ui.Amount
 import com.ecofit.app.ui.ProgressBar
@@ -40,6 +41,7 @@ import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.countUp
+import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Ice
@@ -52,8 +54,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
 
-// SavingsCalculator의 커피 단가와 같게 유지
-private const val COFFEE_WON = 4500
 private const val WEEKS_PER_YEAR = 52
 
 data class WeeklySummary(val tripCount: Int, val savings: TripSavings, val avgScore: Int?)
@@ -119,7 +119,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
+            Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight().tourTarget("home.savings")) {
                 TileLabel("이번 주 회생 제동으로 아낀 전기요금")
                 Column {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
@@ -132,6 +132,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                         // 운전 없이 전체 흐름을 보여 주는 시연용 버튼
                         Box(
                             Modifier
+                                .tourTarget("home.demo")
                                 .clip(RoundedCornerShape(50))
                                 .background(if (isDemo) Paper else Ink)
                                 .clickable { vm.toggleDemo() }
@@ -146,7 +147,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                     }
                 }
             }
-            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+            Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight().tourTarget("home.score")) {
                 TileLabel("이번 주 에코 점수")
                 RingGauge(
                     fraction = (avgScore ?: 0) / 100f,
@@ -191,15 +192,14 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 } else {
                     // 이번 주(최근 7일) 아낀 돈을 그대로 연 단위로 늘린 값. 주행이 쌓일수록 정확해진다
                     val annualWon = s.savedWon * WEEKS_PER_YEAR
-                    val annualCoffeeCups = annualWon / COFFEE_WON.toFloat()
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            "1년에 약\n${"%,d".format(annualWon)}원",
+                            "1년에 약\n${"%,d".format(countUp(annualWon))}원",
                             fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 50.sp,
                         )
                         Text(
-                            "커피 ${annualCoffeeCups.fmt(1)}잔 값",
-                            fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ice,
+                            MoneyUnits.describe(annualWon) ?: MoneyUnits.untilNext(annualWon),
+                            fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Ice,
                         )
                         Text(
                             "이번 주 ${s.savedKm.fmt(1)}km를 공짜로 달린 셈",
