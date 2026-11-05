@@ -6,7 +6,6 @@ import ai.pleos.playground.tts.constant.Mode
 import ai.pleos.playground.tts.listener.EventListener
 import ai.pleos.playground.tts.listener.OnInitializeListener
 import android.content.Context
-import android.media.AudioAttributes
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -77,13 +76,6 @@ class TtsRepository(context: Context) {
                 // 바로 실패한다. 국가 코드까지 있는 ko-KR을 써야 함
                 tts.setLocale(Locale("ko", "KR"))
                 tts.addEventListener(listener)
-                // 안내 음성으로 분류해서 음악이 잠깐 작아졌다 돌아오게 한다
-                tts.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build()
-                )
                 ready = true
                 Log.i(tag, "TTS ready (ON_DEVICE, ko)")
             }
