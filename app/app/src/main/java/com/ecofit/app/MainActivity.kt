@@ -6,7 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +60,7 @@ import com.ecofit.app.ui.onboarding.OnboardingScreen
 import com.ecofit.app.ui.report.ReportScreen
 import com.ecofit.app.ui.theme.Black
 import com.ecofit.app.ui.theme.EcoFitTheme
+import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
 import com.ecofit.app.ui.theme.Paper
@@ -91,6 +100,7 @@ private val dests = listOf(
     Dest("report", "리포트"),
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
     val nav = rememberNavController()
@@ -155,7 +165,9 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(
-                    Modifier.padding(start = 10.dp, bottom = 22.dp),
+                    Modifier
+                        .padding(start = 10.dp, bottom = 22.dp)
+                        .combinedClickable(onClick = {}, onLongClick = { Tour.restart() }),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     EcoLogo(60.dp)
@@ -193,20 +205,29 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
 
                 Spacer(Modifier.weight(1f))
 
+                // 음성 켜기/끄기. 동그란 스피커 버튼 + 상태 문구
                 val ttsEnabled by EcoFitApp.instance.ttsRepo.enabled.collectAsStateWithLifecycle()
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable { EcoFitApp.instance.ttsRepo.setEnabled(!ttsEnabled) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        "음성 안내", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Switch(
-                        checked = ttsEnabled,
-                        onCheckedChange = { EcoFitApp.instance.ttsRepo.setEnabled(it) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = Ink),
-                    )
+                    SpeakerIcon(on = ttsEnabled)
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            if (ttsEnabled) "음성 안내 켜짐" else "음성 안내 꺼짐",
+                            fontSize = 21.sp, fontWeight = FontWeight.Bold,
+                            color = if (ttsEnabled) Ink else InkMuted,
+                        )
+                        Text(
+                            if (ttsEnabled) "누르면 꺼져요" else "누르면 켜져요",
+                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
+                    }
                 }
             }
 
@@ -237,6 +258,40 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
                     EcoFitApp.instance.vehicleRepo.startDemo()
                 },
             )
+        }
+    }
+}
+
+// 스피커 아이콘. 켜지면 검정 원에 아이스블루 소리 파형, 꺼지면 회색 원에 X
+@Composable
+private fun SpeakerIcon(on: Boolean) {
+    val fg = if (on) Ice else InkMuted
+    Box(
+        Modifier.size(60.dp).clip(CircleShape).background(if (on) Ink else Ink.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(30.dp)) {
+            val w = size.width
+            val h = size.height
+            val stroke = Stroke(width = w * 0.09f, cap = StrokeCap.Round)
+            // 스피커 몸통
+            val body = Path().apply {
+                moveTo(w * 0.12f, h * 0.38f)
+                lineTo(w * 0.30f, h * 0.38f)
+                lineTo(w * 0.52f, h * 0.20f)
+                lineTo(w * 0.52f, h * 0.80f)
+                lineTo(w * 0.30f, h * 0.62f)
+                lineTo(w * 0.12f, h * 0.62f)
+                close()
+            }
+            drawPath(body, fg)
+            if (on) {
+                drawArc(fg, -45f, 90f, false, Offset(w * 0.30f, h * 0.28f), Size(w * 0.44f, h * 0.44f), style = stroke)
+                drawArc(fg, -50f, 100f, false, Offset(w * 0.22f, h * 0.12f), Size(w * 0.76f, h * 0.76f), style = stroke)
+            } else {
+                drawLine(fg, Offset(w * 0.66f, h * 0.38f), Offset(w * 0.90f, h * 0.62f), stroke.width, StrokeCap.Round)
+                drawLine(fg, Offset(w * 0.90f, h * 0.38f), Offset(w * 0.66f, h * 0.62f), stroke.width, StrokeCap.Round)
+            }
         }
     }
 }

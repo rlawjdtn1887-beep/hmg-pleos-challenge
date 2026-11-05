@@ -75,6 +75,9 @@ object Tour {
         if (!prefs.getBoolean(KEY_DONE, false)) step = 0
     }
 
+    // 로고를 길게 누르면 언제든 다시 볼 수 있다
+    fun restart() { step = 0 }
+
     fun next(context: Context) {
         if (step + 1 < steps.size) step++ else finish(context)
     }
