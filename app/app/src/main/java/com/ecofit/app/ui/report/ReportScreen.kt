@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -97,12 +96,6 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     val trips by vm.trips.collectAsStateWithLifecycle()
     val app = EcoFitApp.instance
 
-    // 요약을 다 말하기 전에 다른 화면으로 넘어가면(예: 홈 눌러서 데모 바로 시작) 뒤따라오지 않게 끊는다.
-    // owner로 "내가 시킨 말일 때만" 끊어서, 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다
-    // 늦게 잡혀도 막 시작된 다음 화면 말까지 같이 끊어버리는 일이 없게 한다
-    val ttsOwner = remember { Any() }
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
-
     if (trips.isEmpty()) {
         EmptyReport(onDemo = { app.vehicleRepo.startDemo() })
         return
@@ -122,10 +115,9 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
         val charge = if (Coaching.isLowBattery(latest.endSocPercent)) " 배터리가 부족해요. 충전소 찾기를 눌러 주세요." else ""
         // 주행이 끝났을 때 하는 요약이라 말하던 게 있어도 끊고 말한다
         app.ttsRepo.speak(
-            "주행이 끝났어요. ${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원을 아꼈어요. " +
+            "주행이 끝났어요. ${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원어치 전기를 되찾았어요. " +
                 "에코 점수 ${EcoScore.of(latest)}점, $tip.$charge",
             interrupt = true,
-            owner = ttsOwner,
         )
     }
 
@@ -149,7 +141,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight()) {
                 TileLabel(
                     (if (isLatestShown) "방금 끝난 주행" else "선택한 주행") +
-                        " · ${timeFmt.format(Date(shown.startTimeMs))}\n회생 제동으로 아낀 돈"
+                        " · ${timeFmt.format(Date(shown.startTimeMs))}\n되찾은 전기요금 · 추정"
                 )
                 Column {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
@@ -168,7 +160,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                                     .clip(RoundedCornerShape(50))
                                     .background(Ink)
                                     .clickable {
-                                        app.ttsRepo.speak("근처 충전소를 찾아드릴게요", interrupt = true, owner = ttsOwner)
+                                        app.ttsRepo.speak("근처 충전소를 찾아드릴게요", interrupt = true)
                                         app.naviRepo.showNearbyChargingStations()
                                     }
                                     .padding(horizontal = 22.dp, vertical = 12.dp),
@@ -303,7 +295,7 @@ private fun EmptyReport(onDemo: () -> Unit) {
                 Text("아직 기록된 주행이 없어요", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = Paper)
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "D로 출발하고 P로 세우면\n여기에 아낀 돈과 에코 점수가 쌓여요",
+                    "D로 출발하고 P로 세우면\n여기에 되찾은 전기요금과 에코 점수가 쌓여요",
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Muted,
                     textAlign = TextAlign.Center, lineHeight = 32.sp,
                 )
@@ -343,7 +335,7 @@ private fun EmptyReport(onDemo: () -> Unit) {
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
                 TileLabel("리포트에 담기는 것")
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf("회생 제동으로 아낀 돈", "에코 점수 0~100", "되찾은 에너지와 코칭", "지난 주행 비교 그래프").forEach {
+                    listOf("페달 떼서 되찾은 전기요금", "에코 점수 0~100", "되찾은 에너지와 코칭", "지난 주행 비교 그래프").forEach {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(10.dp).clip(CircleShape).background(Ice))
                             Spacer(Modifier.width(14.dp))

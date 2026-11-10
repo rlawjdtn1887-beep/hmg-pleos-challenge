@@ -69,7 +69,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val low = margin != null && margin < LOW_MARGIN_KM
     val expectedWon = dest?.let { ((wonPerKm ?: RegenHistory.DEFAULT_WON_PER_KM) * it).roundToInt() }
     val expectedText = expectedWon?.let {
-        "이 경로에서 약 ${"%,d".format(it)}원 아낄 수 있어요" + if (wonPerKm == null) " (기본값 기준)" else ""
+        "이 경로에서 약 ${"%,d".format(it)}원어치 전기를 되찾을 수 있어요" + if (wonPerKm == null) " (기본값 기준)" else ""
     }
 
     val outside = snap.outsideTempC
@@ -101,7 +101,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
             )
         }
         if (snap.driveMode == DriveMode.SPORT)
-            add(Tip("스포츠 모드는 전비가 약 15% 떨어져요. 에코 모드를 추천해요"))
+            add(Tip("에코 모드로 바꾸면 같은 배터리로 더 멀리 갈 수 있어요"))
         if (isEmpty()) add(Tip("지금 설정 좋아요. 그대로 출발하세요"))
     }
 

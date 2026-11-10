@@ -131,11 +131,12 @@ class TripRecorder(
             if (dist < minTripKm) return null
 
             // 소모량 확정 순서: 배터리 kWh 차이 > SoC 차이 x 용량 > 전비로 쌓은 값
+            // 차 전비가 회생을 뺀 순소비 기준이라 SoC 쪽도 회생을 더하지 않고 순소비로 맞춘다
             var used = a.used
             val cap = s.batteryCapacityKwh
             val endSoc = s.batterySocPercent
             if (used == 0f && a.startSoc != null && endSoc != null && cap != null && a.startSoc - endSoc >= 1f) {
-                used = ((a.startSoc - endSoc) / 100f * cap + a.regen).coerceAtLeast(0f)
+                used = ((a.startSoc - endSoc) / 100f * cap).coerceAtLeast(0f)
             }
             if (used == 0f) used = a.effUsed
 

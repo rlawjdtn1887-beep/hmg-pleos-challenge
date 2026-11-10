@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -100,11 +98,6 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
     val soc = snap.batterySocPercent
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
 
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
-    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
-    val ttsOwner = remember { Any() }
-    DisposableEffect(Unit) { onDispose { EcoFitApp.instance.ttsRepo.stopIfOwnedBy(ttsOwner) } }
-
     // 앱을 켠 뒤 처음 홈에 왔을 때 한 번만 인사한다. weekly는 Room 쿼리가 끝나기 전엔
     // 초기값(0건)이라 잠깐 기다렸다가 최신 값을 읽는다
     LaunchedEffect(Unit) {
@@ -119,17 +112,17 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             else -> "안녕하세요."
         }
         val text = if (w.tripCount == 0) {
-            "$hello 에코핏이 회생 제동을 기록할게요."
+            "$hello 페달을 떼면 돌아오는 전기를 에코핏이 기록할게요."
         } else {
-            "$hello 이번 주 ${"%,d".format(w.savings.savedWon)}원 아꼈어요. 오늘도 부드럽게 출발해요."
+            "$hello 이번 주 ${"%,d".format(w.savings.savedWon)}원어치 전기를 되찾았어요. 오늘도 부드럽게 출발해요."
         }
-        EcoFitApp.instance.ttsRepo.speak(text, owner = ttsOwner)
+        EcoFitApp.instance.ttsRepo.speak(text)
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Tile(TileTone.Accent, Modifier.weight(2f).fillMaxHeight().tourTarget("home.savings")) {
-                TileLabel("이번 주 회생 제동으로 아낀 전기요금")
+                TileLabel("이번 주 페달 떼서 되찾은 전기요금 · 추정")
                 Column {
                     Amount("%,d".format(countUp(s.savedWon)), "원", 150.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
