@@ -75,6 +75,10 @@ class TtsRepository(context: Context) {
                 // Locale.KOREAN("ko")만 주면 온디바이스 엔진이 "unsupported locale: ko-"로
                 // 바로 실패한다. 국가 코드까지 있는 ko-KR을 써야 함
                 tts.setLocale(Locale("ko", "KR"))
+                // speaker를 안 정하면 CAAS가 내부 기본값 "lyra"를 먼저 시도했다가 온디바이스
+                // 한국어에서 지원 안 돼서 매번 "HAEUN"으로 폴백한다. 이 폴백이 매 발화 생성 직전에
+                // 에러 경로로 끼어들면서 시작 부분이 지지직거리는 원인으로 보여 아예 HAEUN으로 고정
+                tts.setSpeakerType("HAEUN")
                 tts.addEventListener(listener)
                 ready = true
                 Log.i(tag, "TTS ready (ON_DEVICE, ko)")
