@@ -15,8 +15,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * NaviHelper SDK 연동. 담당: 정수
@@ -41,11 +45,21 @@ class NaviRepository(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var pollJob: Job? = null
 
+    // 실제 내비에서 받은 값
     private val _remainDistanceKm = MutableStateFlow<Float?>(null)
-    val remainDistanceKm: StateFlow<Float?> = _remainDistanceKm.asStateFlow()
-
     private val _remainTimeMin = MutableStateFlow<Int?>(null)
-    val remainTimeMin: StateFlow<Int?> = _remainTimeMin.asStateFlow()
+
+    // 데모 주행 중에만 쓰는 가짜 목적지. 데모가 끝나면 null로 돌아가 실제 값이 다시 보인다
+    private val demoDistanceKm = MutableStateFlow<Float?>(null)
+    private val demoTimeMin = MutableStateFlow<Int?>(null)
+    private val demoName = MutableStateFlow<String?>(null)
+
+    val remainDistanceKm: StateFlow<Float?> = combine(_remainDistanceKm, demoDistanceKm) { real, demo -> demo ?: real }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    val remainTimeMin: StateFlow<Int?> = combine(_remainTimeMin, demoTimeMin) { real, demo -> demo ?: real }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    // NaviHelper는 목적지 이름을 주지 않아서 실제 주행에선 null, 데모에서만 채워진다
+    val destinationName: StateFlow<String?> = demoName.asStateFlow()
 
     private val listener = object : NaviHelperEventListener {
         override fun onDestinationInfo(destinationInfo: DestinationInfo) {
@@ -88,6 +102,24 @@ class NaviRepository(context: Context) {
         naviHelper.requestNavigationScreen(NavigationScreenRequest.NearbyChargingStations)
     }
 
+    // 데모 주행 시작. 목적지를 하나 잡아 두고, 데모가 달린 거리만큼 남은 거리를 줄인다
+    fun startDemo() {
+        demoName.value = DEMO_DEST_NAME
+        updateDemo(0f)
+    }
+
+    fun updateDemo(traveledKm: Float) {
+        val remain = (DEMO_DEST_KM - traveledKm).coerceAtLeast(0.1f)
+        demoDistanceKm.value = remain
+        demoTimeMin.value = (remain / DEMO_AVG_KMH * 60f).roundToInt().coerceAtLeast(1)
+    }
+
+    fun stopDemo() {
+        demoName.value = null
+        demoDistanceKm.value = null
+        demoTimeMin.value = null
+    }
+
     private fun startPolling() {
         pollJob?.cancel()
         pollJob = scope.launch {
@@ -109,5 +141,8 @@ class NaviRepository(context: Context) {
 
     companion object {
         private const val POLL_INTERVAL_MS = 15_000L
+        private const val DEMO_DEST_NAME = "현대자동차 본사"
+        private const val DEMO_DEST_KM = 12f
+        private const val DEMO_AVG_KMH = 40f
     }
 }

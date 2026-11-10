@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -62,11 +60,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val wonPerKm by vm.wonPerKm.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
     val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
-
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
-    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
-    val ttsOwner = remember { Any() }
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
+    val destName by app.naviRepo.destinationName.collectAsStateWithLifecycle()
 
     // 0은 값을 못 받은 경우로 본다
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
@@ -101,7 +95,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         chargeTip?.let {
             add(
                 Tip(it) {
-                    app.ttsRepo.speak("근처 충전소를 찾아드릴게요", owner = ttsOwner)
+                    app.ttsRepo.speak("근처 충전소를 찾아드릴게요")
                     app.naviRepo.showNearbyChargingStations()
                 }
             )
@@ -122,11 +116,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         }
         val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
         val tipsPart = tips.joinToString(". ") { it.text }
-        app.ttsRepo.speak(
-            listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "),
-            interrupt = true,
-            owner = ttsOwner,
-        )
+        app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "), interrupt = true)
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -141,7 +131,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                         )
                     }
                     margin == null -> {
-                        TileLabel("목적지까지")
+                        TileLabel(destName?.let { "$it 까지" } ?: "목적지까지")
                         Column {
                             Amount(dest.fmt(0), "km", 150.sp)
                             Text("남은 주행거리 확인 중", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
@@ -150,15 +140,14 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                     }
                     else -> {
                         TileLabel(
-                            if (low) "충전이 필요할 수 있어요" else "목적지까지",
+                            if (low) "충전이 필요할 수 있어요" else "목적지에 도착해도 남는 거리",
                             color = if (low) Amber else InkMuted,
                         )
                         Column {
-                            Amount(dest.fmt(0), "km", 150.sp)
+                            Amount(margin.fmt(0), "km", 150.sp)
                             Text(
-                                "도착하면 ${margin.fmt(0)}km 남아요" + (etaMin?.let { " · 약 ${it}분 후 도착" } ?: ""),
+                                "${destName ?: "목적지"} ${dest.fmt(0)}km" + (etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                                color = if (low) Amber else InkMuted,
                             )
                             expectedText?.let {
                                 Text(it, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (low) Ice else Ink)

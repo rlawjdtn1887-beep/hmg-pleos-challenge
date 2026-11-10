@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -89,21 +88,11 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val app = EcoFitApp.instance
     val snap by app.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     val trip by app.recorder.live.collectAsStateWithLifecycle()
-    val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
+    val isDemo by app.vehicleRepo.isDemo.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
-
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
-    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
-    val ttsOwner = remember { Any() }
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
-
-    // 주행 시작 시점의 목적지까지 거리를 한 번 붙잡아두고, 거기서 달린 거리(trip.distanceKm)를
-    // 계속 빼서 보여준다. 내비 쪽 값은 15초마다만 갱신돼서 그대로 쓰면 뚝뚝 끊겨 보인다
-    var destAtStart by remember { mutableStateOf<Float?>(null) }
-    LaunchedEffect(destKm) {
-        if (destAtStart == null) destAtStart = destKm?.takeIf { it > 0f }
-    }
-    val remainingToDestKm = destAtStart?.let { (it - trip.distanceKm).coerceAtLeast(0f) }
+    val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
+    val destName by app.naviRepo.destinationName.collectAsStateWithLifecycle()
+    val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
 
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
@@ -129,7 +118,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     }
     // 운전 중 음성은 고쳐야 할 게 있을 때만. 급제동이 잡히면 바로 말하고 15초 안엔 다시 안 한다
     LaunchedEffect(hardBrake) {
-        if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000, owner = ttsOwner)
+        if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000)
     }
     // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다
     var lowBatterySpoken by remember { mutableStateOf(false) }
@@ -137,7 +126,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     LaunchedEffect(snap.batterySocPercent) {
         if (trip.active && !lowBatterySpoken && Coaching.isLowBattery(snap.batterySocPercent)) {
             lowBatterySpoken = true
-            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true, owner = ttsOwner)
+            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true)
         }
     }
     LaunchedEffect(popupVisible, popupWon) {
@@ -166,7 +155,16 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             .fillMaxSize()
                             .border(3.dp, Ink.copy(alpha = regenBorderAlpha * 0.8f), RoundedCornerShape(28.dp)),
                     ) {
-                        TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                            // 데모 중엔 가짜 데이터라는 걸 화면에 남겨 둔다
+                            if (isDemo) {
+                                Spacer(Modifier.width(12.dp))
+                                Box(Modifier.clip(RoundedCornerShape(50)).background(Ink).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                                    Text("데모 · 가상 데이터", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ice)
+                                }
+                            }
+                        }
                         Column {
                             Amount("%,d".format(won), "원", 150.sp)
                             Spacer(Modifier.height(16.dp))
@@ -216,28 +214,24 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                         color = if (hardBrake) Amber else Paper,
                     )
                 }
-                // 이번 주행 칸이 아래쪽에 여백이 많이 남아서 위아래로 나눠 목적지까지 거리를 같이 넣었다
-                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
-                        TileLabel("목적지까지")
-                        if (remainingToDestKm != null) {
-                            Amount(remainingToDestKm.fmt(1), "km", 72.sp)
-                        } else {
-                            Text("목적지 입력하면 여기 떠요", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
-                        }
-                    }
-                    Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
-                        TileLabel("이번 주행")
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                            Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                            // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
-                            val usedWh = (trip.usedKwh * 1000).fmt(0)
+                Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
+                    TileLabel("이번 주행")
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        // 내비 목적지가 있으면 남은 거리도 같이 보여준다
+                        destKm?.takeIf { it > 0f }?.let { d ->
                             Text(
-                                "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
+                                "${destName ?: "목적지"}까지 ${d.fmt(1)}km" + (etaMin?.let { " · 약 ${it}분" } ?: ""),
                                 fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                             )
                         }
+                        // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
+                        val usedWh = (trip.usedKwh * 1000).fmt(0)
+                        Text(
+                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
+                            fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
                     }
                 }
             }
