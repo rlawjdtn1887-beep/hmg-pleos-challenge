@@ -57,7 +57,13 @@ class EcoFitApp : Application() {
                 recorder.feed(s)?.let { trip ->
                     db.tripDao().insert(trip.toEntity())
                 }
+                // 데모 중엔 달린 거리만큼 가짜 목적지까지 남은 거리를 줄인다
+                if (vehicleRepo.isDemo.value) naviRepo.updateDemo(s.odometerKm ?: 0f)
             }
+        }
+        // 데모가 켜지면 목적지(현대자동차 본사)를 잡아 주고, 끝나면 실제 내비 값으로 돌아간다
+        appScope.launch {
+            vehicleRepo.isDemo.collect { on -> if (on) naviRepo.startDemo() else naviRepo.stopDemo() }
         }
     }
 }
