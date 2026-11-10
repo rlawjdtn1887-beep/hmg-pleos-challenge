@@ -52,7 +52,7 @@ fun OnboardingScreen(onStart: () -> Unit, onDemo: () -> Unit) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                "회생 제동으로 되찾은 전기를 돈으로 보여주고\n급제동을 줄이도록 코칭해요",
+                "페달을 떼면 차가 전기를 다시 채워요 (회생 제동)\n그 전기를 돈으로 보여주고, 급제동을 줄이도록 코칭해요",
                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Muted,
                 textAlign = TextAlign.Center, lineHeight = 34.sp,
             )
