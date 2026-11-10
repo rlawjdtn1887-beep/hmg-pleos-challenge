@@ -38,6 +38,13 @@ class TtsRepository(context: Context) {
     private var speaking = false
     private val lastSpokenAt = HashMap<String, Long>()
 
+    // 화면이 떠날 때 "내가 마지막으로 시작한 말이 아직도 나오고 있으면" 끊으려고 쓴다.
+    // 예를 들어 주행 화면에서 리포트로 넘어가면, 주행 화면이 사라지는 타이밍이 리포트 화면의
+    // 요약 발화 시작보다 늦게 잡힐 수 있다. 그때 owner 비교 없이 무조건 stop()하면 방금 막
+    // 시작한 리포트 요약까지 끊겨버린다. speak()마다 호출한 화면의 토큰을 기록해두고,
+    // 그 화면이 사라질 때는 지금 재생 중인 게 정말 자기가 시킨 말일 때만 끊는다
+    private var owner: Any? = null
+
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _enabled = MutableStateFlow(prefs.getBoolean(KEY_TTS_ENABLED, true))
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
@@ -94,8 +101,9 @@ class TtsRepository(context: Context) {
     /**
      * @param interrupt true면 말하던 걸 끊고 바로 말한다. 급제동 경고처럼 늦으면 의미 없는 것만.
      * @param key 같은 종류 문장을 묶는 이름. minGapMs 안에 같은 key가 또 오면 건너뛴다.
+     * @param owner 이 말을 시킨 화면의 토큰. stopIfOwnedBy()로 자기 말만 골라 끊을 때 쓴다.
      */
-    fun speak(text: String, interrupt: Boolean = false, key: String? = null, minGapMs: Long = 0) {
+    fun speak(text: String, interrupt: Boolean = false, key: String? = null, minGapMs: Long = 0, owner: Any? = null) {
         if (!ready || !_enabled.value) return
         val now = System.currentTimeMillis()
         if (key != null && minGapMs > 0) {
@@ -104,6 +112,7 @@ class TtsRepository(context: Context) {
         }
         if (speaking && !interrupt) return
         if (key != null) lastSpokenAt[key] = now
+        this.owner = owner
         speaking = true
         main.removeCallbacks(release)
         main.postDelayed(release, 1500L + text.length * 180L)
@@ -116,8 +125,14 @@ class TtsRepository(context: Context) {
     }
 
     fun stopSpeaking() {
+        owner = null
         if (ready) runCatching { tts.stop() }
         finished()
+    }
+
+    // 화면이 사라질 때 호출. 그 사이 다른 화면이 새로 말을 시작했으면(owner가 바뀌었으면) 안 건드린다
+    fun stopIfOwnedBy(screenOwner: Any) {
+        if (owner === screenOwner) stopSpeaking()
     }
 
     fun stop() {

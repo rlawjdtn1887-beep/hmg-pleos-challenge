@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -62,8 +63,10 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
     val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
 
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
+    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
+    val ttsOwner = remember { Any() }
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
 
     // 0은 값을 못 받은 경우로 본다
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
@@ -98,7 +101,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         chargeTip?.let {
             add(
                 Tip(it) {
-                    app.ttsRepo.speak("근처 충전소를 찾아드릴게요")
+                    app.ttsRepo.speak("근처 충전소를 찾아드릴게요", owner = ttsOwner)
                     app.naviRepo.showNearbyChargingStations()
                 }
             )
@@ -119,7 +122,11 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
         }
         val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
         val tipsPart = tips.joinToString(". ") { it.text }
-        app.ttsRepo.speak(listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "), interrupt = true)
+        app.ttsRepo.speak(
+            listOf(destPart, rangePart, tipsPart).filter { it.isNotBlank() }.joinToString(" "),
+            interrupt = true,
+            owner = ttsOwner,
+        )
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {

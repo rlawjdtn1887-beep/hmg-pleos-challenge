@@ -97,8 +97,11 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     val trips by vm.trips.collectAsStateWithLifecycle()
     val app = EcoFitApp.instance
 
-    // 요약을 다 말하기 전에 다른 화면으로 넘어가면(예: 홈 눌러서 데모 바로 시작) 뒤따라오지 않게 끊는다
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
+    // 요약을 다 말하기 전에 다른 화면으로 넘어가면(예: 홈 눌러서 데모 바로 시작) 뒤따라오지 않게 끊는다.
+    // owner로 "내가 시킨 말일 때만" 끊어서, 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다
+    // 늦게 잡혀도 막 시작된 다음 화면 말까지 같이 끊어버리는 일이 없게 한다
+    val ttsOwner = remember { Any() }
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
 
     if (trips.isEmpty()) {
         EmptyReport(onDemo = { app.vehicleRepo.startDemo() })
@@ -122,6 +125,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
             "주행이 끝났어요. ${latest.distanceKm.fmt(1)}킬로미터를 달리면서 ${ls.savedWon}원을 아꼈어요. " +
                 "에코 점수 ${EcoScore.of(latest)}점, $tip.$charge",
             interrupt = true,
+            owner = ttsOwner,
         )
     }
 
@@ -164,7 +168,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                                     .clip(RoundedCornerShape(50))
                                     .background(Ink)
                                     .clickable {
-                                        app.ttsRepo.speak("근처 충전소를 찾아드릴게요", interrupt = true)
+                                        app.ttsRepo.speak("근처 충전소를 찾아드릴게요", interrupt = true, owner = ttsOwner)
                                         app.naviRepo.showNearbyChargingStations()
                                     }
                                     .padding(horizontal = 22.dp, vertical = 12.dp),

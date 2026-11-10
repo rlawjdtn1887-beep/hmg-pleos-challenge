@@ -92,8 +92,10 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
 
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
-    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
+    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
+    val ttsOwner = remember { Any() }
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopIfOwnedBy(ttsOwner) } }
 
     // 주행 시작 시점의 목적지까지 거리를 한 번 붙잡아두고, 거기서 달린 거리(trip.distanceKm)를
     // 계속 빼서 보여준다. 내비 쪽 값은 15초마다만 갱신돼서 그대로 쓰면 뚝뚝 끊겨 보인다
@@ -127,7 +129,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     }
     // 운전 중 음성은 고쳐야 할 게 있을 때만. 급제동이 잡히면 바로 말하고 15초 안엔 다시 안 한다
     LaunchedEffect(hardBrake) {
-        if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000)
+        if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000, owner = ttsOwner)
     }
     // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다
     var lowBatterySpoken by remember { mutableStateOf(false) }
@@ -135,7 +137,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     LaunchedEffect(snap.batterySocPercent) {
         if (trip.active && !lowBatterySpoken && Coaching.isLowBattery(snap.batterySocPercent)) {
             lowBatterySpoken = true
-            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true)
+            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true, owner = ttsOwner)
         }
     }
     LaunchedEffect(popupVisible, popupWon) {

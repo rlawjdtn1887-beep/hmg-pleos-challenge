@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,8 +100,10 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
     val soc = snap.batterySocPercent
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
 
-    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
-    DisposableEffect(Unit) { onDispose { EcoFitApp.instance.ttsRepo.stopSpeaking() } }
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다. owner로 내가 시킨 말일 때만 끊어서
+    // 이 화면이 사라지는 타이밍이 다음 화면 발화 시작보다 늦어도 그쪽 말까지 끊지 않는다
+    val ttsOwner = remember { Any() }
+    DisposableEffect(Unit) { onDispose { EcoFitApp.instance.ttsRepo.stopIfOwnedBy(ttsOwner) } }
 
     // 앱을 켠 뒤 처음 홈에 왔을 때 한 번만 인사한다. weekly는 Room 쿼리가 끝나기 전엔
     // 초기값(0건)이라 잠깐 기다렸다가 최신 값을 읽는다
@@ -120,7 +123,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
         } else {
             "$hello 이번 주 ${"%,d".format(w.savings.savedWon)}원 아꼈어요. 오늘도 부드럽게 출발해요."
         }
-        EcoFitApp.instance.ttsRepo.speak(text)
+        EcoFitApp.instance.ttsRepo.speak(text, owner = ttsOwner)
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
