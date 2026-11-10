@@ -158,7 +158,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("남은 주행거리")
                 Column {
-                    Amount(range?.fmt(0) ?: "—", "km", 96.sp)
+                    // 에뮬레이터처럼 남은 거리가 안 오면 굵은 줄 대신 작은 안내 글자
+                    if (range != null) Amount(range.fmt(0), "km", 96.sp)
+                    else Text("차에서 정보를 받는 중이에요", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
                     Text(
                         "배터리 ${snap.batterySocPercent?.fmt(0) ?: "—"}%",
                         fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
