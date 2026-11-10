@@ -159,7 +159,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
-                                    (vsLast?.let { " · 지난 주행보다 ${it.signed()}원" } ?: ""),
+                                    (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더 아꼈어요" else " · 지난 주행보다 ${-it}원 적어요" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             )
                         }
@@ -206,8 +206,10 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
+                        val usedWh = (trip.usedKwh * 1000).fmt(0)
                         Text(
-                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점 · 소모 ${(trip.usedKwh * 1000).fmt(0)}Wh",
+                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
                             fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                         )
                     }
