@@ -9,7 +9,7 @@
 
 - **팀명**: Back to the Future (백투더퓨처)
 - **앱 이름**: EcoFit
-- **APK**: [`apk/백투터퓨쳐_ecofit_release.apk`](apk/백투터퓨쳐_ecofit_release.apk) (release 빌드, adb install로 바로 설치 가능)
+- **APK**: [`apk/BackToTheFuture_EcoFit_release.apk`](apk/BackToTheFuture_EcoFit_release.apk) (release 빌드, adb install로 바로 설치 가능)
 
 ## 앱 소개
 
@@ -53,10 +53,10 @@ EcoFit은 Pleos SDK와 AAOS 차량 API로 배터리·차속·기어·공조 데�
 
 ## 실행 방법
 
-1. [`apk/백투터퓨쳐_ecofit_release.apk`](apk/백투터퓨쳐_ecofit_release.apk)를 내려받습니다.
+1. [`apk/BackToTheFuture_EcoFit_release.apk`](apk/BackToTheFuture_EcoFit_release.apk)를 내려받습니다.
 2. AAOS(Android Automotive) 기기 또는 에뮬레이터에 설치합니다.
    ```bash
-   adb install apk/백투터퓨쳐_ecofit_release.apk
+   adb install apk/BackToTheFuture_EcoFit_release.apk
    ```
 3. 앱 목록에서 **EcoFit**을 실행합니다.
 4. 첫 실행 시 안내 투어가 뜹니다. 소개 화면의 **"데모 보기"** 또는 홈 화면의 **"데모 주행 보기"** 버튼을 누르면 실제 운전 없이
