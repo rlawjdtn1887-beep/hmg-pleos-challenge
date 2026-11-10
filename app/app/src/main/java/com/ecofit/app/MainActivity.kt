@@ -112,9 +112,10 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
     val context = LocalContext.current
 
     // 데모 시작/종료 순간 실제 차량 기어 <-> 데모 대본 초기 기어(P)로 스냅샷 출처가 바뀌는데,
-    // 그 전환 자체를 "도착해서 P로 세웠다"처럼 잘못 읽어서 리포트로 튀는 걸 막는다
+    // 그 전환 자체를 "도착해서 P로 세웠다"처럼 잘못 읽어서 리포트로 튀는 걸 막는다.
+    // null로 비우면 바로 다음 기어 변화(데모의 P->D)까지 무시돼서 주행 중으로 못 넘어가므로, 지금 기어를 기준으로 다시 잡는다
     val isDemo by EcoFitApp.instance.vehicleRepo.isDemo.collectAsStateWithLifecycle()
-    LaunchedEffect(isDemo) { prevGear = null }
+    LaunchedEffect(isDemo) { prevGear = snap.gear }
 
     // 안내 투어 단계마다 해당 화면으로 옮겨 준다
     LaunchedEffect(Tour.step) {
