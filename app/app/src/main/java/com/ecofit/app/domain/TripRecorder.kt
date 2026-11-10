@@ -20,6 +20,7 @@ data class LiveTrip(
 
 // 시작: P/N -> D/R, 종료: D/R -> P. 최소 거리 미만이면 버린다.
 // 회생은 차속이 있으면 RegenEstimator, 없으면 배터리 kWh 증가분으로 계산.
+// 소모는 주행 중엔 차가 주는 전비(km/kWh)로 거리마다 쌓고, 주행이 끝나면 SoC 차이로 확정한다.
 // 급제동/급가속은 1초 구간 가감속도로 판단. SDK 브레이크 값은 밟음 여부(0/100)뿐이라 쓰지 않는다.
 class TripRecorder(
     private val estimator: RegenEstimator = RegenEstimator(),
@@ -41,6 +42,7 @@ class TripRecorder(
         val startOdo = start.odometerKm
         var speedDistKm = 0f
         var used = 0f
+        var effUsed = 0f
         var regen = 0f
         var hardBrake = 0
         var hardAccel = 0
@@ -76,7 +78,11 @@ class TripRecorder(
         val v1 = s.speedKmh
         if (v0 != null && v1 != null) {
             a.regen += estimator.step(v0, v1, dt)
-            a.speedDistKm += (v0 + v1) / 2f / 3600f * dt
+            val segKm = (v0 + v1) / 2f / 3600f * dt
+            a.speedDistKm += segKm
+            // 전비가 들어오면 이번 구간 거리만큼 소모를 쌓는다. 1초마다 부드럽게 올라간다
+            val eff = s.evEfficiencyKmPerKwh
+            if (eff != null && eff in 1f..15f) a.effUsed += segKm / eff
         }
 
         val e0 = p.batteryEnergyKwh
@@ -113,7 +119,7 @@ class TripRecorder(
             distanceKm = dist,
             durationSec = (now - a.startTimeMs) / 1000,
             regenKwh = a.regen,
-            usedKwh = a.used,
+            usedKwh = if (a.used > 0f) a.used else a.effUsed,
             hardBrakeCount = a.hardBrake,
             hardAccelCount = a.hardAccel,
             hardBraking = now - a.lastBrakeEventMs < 2000,
@@ -124,12 +130,14 @@ class TripRecorder(
             _live.value = _live.value.copy(active = false, hardBraking = false)
             if (dist < minTripKm) return null
 
-            // kWh를 못 받는 차는 SoC 차이로 소모량 계산
+            // 소모량 확정 순서: 배터리 kWh 차이 > SoC 차이 x 용량 > 전비로 쌓은 값
             var used = a.used
             val cap = s.batteryCapacityKwh
-            if (used == 0f && a.startSoc != null && s.batterySocPercent != null && cap != null) {
-                used = ((a.startSoc - s.batterySocPercent) / 100f * cap + a.regen).coerceAtLeast(0f)
+            val endSoc = s.batterySocPercent
+            if (used == 0f && a.startSoc != null && endSoc != null && cap != null && a.startSoc - endSoc >= 1f) {
+                used = ((a.startSoc - endSoc) / 100f * cap + a.regen).coerceAtLeast(0f)
             }
+            if (used == 0f) used = a.effUsed
 
             return TripData(
                 startTimeMs = a.startTimeMs,

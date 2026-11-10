@@ -60,7 +60,7 @@ object Tour {
         TourStep("home.score", "home", "운전 습관은 에코 점수로", "급제동과 급가속을 줄일수록 점수가 올라가요.\n이번 주 주행들의 평균이에요."),
         TourStep("drive.savings", "drive", "달리는 동안 실시간으로", "기어를 D로 바꾸면 이 화면이 자동으로 열려요.\n회생할 때마다 금액이 오르고 코칭 문구가 바뀌어요."),
         TourStep("report.score", "report", "주행이 끝나면 리포트", "P로 세우면 자동으로 리포트가 열려요.\n아낀 돈, 에코 점수, 지난 주행 비교까지 한 번에."),
-        TourStep("home.demo", "home", "운전 없이 보고 싶다면", "이 버튼을 누르면 46초짜리 데모 주행이 돌아요.\n주행 중 화면부터 리포트까지 전부 볼 수 있어요."),
+        TourStep("home.demo", "home", "운전 없이 보고 싶다면", "이 버튼을 누르면 45초짜리 데모 주행이 돌아요.\n주행 중 화면부터 리포트까지 전부 볼 수 있어요."),
     )
 
     val bounds = mutableStateMapOf<String, Rect>()
