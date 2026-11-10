@@ -89,6 +89,15 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val snap by app.vehicleRepo.snapshot.collectAsStateWithLifecycle()
     val trip by app.recorder.live.collectAsStateWithLifecycle()
     val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
+    val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
+
+    // 주행 시작 시점의 목적지까지 거리를 한 번 붙잡아두고, 거기서 달린 거리(trip.distanceKm)를
+    // 계속 빼서 보여준다. 내비 쪽 값은 15초마다만 갱신돼서 그대로 쓰면 뚝뚝 끊겨 보인다
+    var destAtStart by remember { mutableStateOf<Float?>(null) }
+    LaunchedEffect(destKm) {
+        if (destAtStart == null) destAtStart = destKm?.takeIf { it > 0f }
+    }
+    val remainingToDestKm = destAtStart?.let { (it - trip.distanceKm).coerceAtLeast(0f) }
 
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
@@ -189,6 +198,9 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     Column {
                         Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
                         Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        remainingToDestKm?.let {
+                            Text("목적지까지 ${it.fmt(1)}km", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        }
                     }
                 }
             }

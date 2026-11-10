@@ -139,14 +139,15 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                     }
                     else -> {
                         TileLabel(
-                            if (low) "충전이 필요할 수 있어요" else "목적지에 도착해도 남는 거리",
+                            if (low) "충전이 필요할 수 있어요" else "목적지까지",
                             color = if (low) Amber else InkMuted,
                         )
                         Column {
-                            Amount(margin.fmt(0), "km", 150.sp)
+                            Amount(dest.fmt(0), "km", 150.sp)
                             Text(
-                                "목적지 ${dest.fmt(0)}km" + (etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""),
+                                "도착하면 ${margin.fmt(0)}km 남아요" + (etaMin?.let { " · 약 ${it}분 후 도착" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                                color = if (low) Amber else InkMuted,
                             )
                             expectedText?.let {
                                 Text(it, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (low) Ice else Ink)
