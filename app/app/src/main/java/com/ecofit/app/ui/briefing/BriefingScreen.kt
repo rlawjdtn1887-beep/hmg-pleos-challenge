@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -60,6 +61,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val wonPerKm by vm.wonPerKm.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
     val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
+
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
 
     // 0은 값을 못 받은 경우로 본다
     val range = snap.remainingRangeKm?.takeIf { it > 0f }

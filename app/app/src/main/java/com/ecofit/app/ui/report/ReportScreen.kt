@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +96,9 @@ private val dayFmt = SimpleDateFormat("M/d", Locale.KOREA)
 fun ReportScreen(vm: ReportViewModel = viewModel()) {
     val trips by vm.trips.collectAsStateWithLifecycle()
     val app = EcoFitApp.instance
+
+    // 요약을 다 말하기 전에 다른 화면으로 넘어가면(예: 홈 눌러서 데모 바로 시작) 뒤따라오지 않게 끊는다
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
 
     if (trips.isEmpty()) {
         EmptyReport(onDemo = { app.vehicleRepo.startDemo() })

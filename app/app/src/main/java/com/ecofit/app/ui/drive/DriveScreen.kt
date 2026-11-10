@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -90,6 +91,9 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val trip by app.recorder.live.collectAsStateWithLifecycle()
     val lastWonPerKm by vm.lastWonPerKm.collectAsStateWithLifecycle()
     val destKm by app.naviRepo.remainDistanceKm.collectAsStateWithLifecycle()
+
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
+    DisposableEffect(Unit) { onDispose { app.ttsRepo.stopSpeaking() } }
 
     // 주행 시작 시점의 목적지까지 거리를 한 번 붙잡아두고, 거기서 달린 거리(trip.distanceKm)를
     // 계속 빼서 보여준다. 내비 쪽 값은 15초마다만 갱신돼서 그대로 쓰면 뚝뚝 끊겨 보인다

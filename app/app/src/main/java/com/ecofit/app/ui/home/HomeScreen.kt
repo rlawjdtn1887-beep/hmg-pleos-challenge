@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -97,6 +98,9 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
 
     val soc = snap.batterySocPercent
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
+
+    // 말하다가 다른 화면으로 넘어가면 뒤따라오지 않게 끊는다
+    DisposableEffect(Unit) { onDispose { EcoFitApp.instance.ttsRepo.stopSpeaking() } }
 
     // 앱을 켠 뒤 처음 홈에 왔을 때 한 번만 인사한다. weekly는 Room 쿼리가 끝나기 전엔
     // 초기값(0건)이라 잠깐 기다렸다가 최신 값을 읽는다
