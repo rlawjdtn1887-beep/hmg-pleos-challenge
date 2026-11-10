@@ -180,7 +180,7 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text("EcoFit", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
-                        Text("회생 제동 코치", fontSize = 19.sp, color = InkMuted)
+                        Text("페달 떼면 돈 되는 앱", fontSize = 19.sp, color = InkMuted)
                     }
                 }
                 dests.forEach { d ->

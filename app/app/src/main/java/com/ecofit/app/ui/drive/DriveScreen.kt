@@ -137,10 +137,10 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     }
 
     val coach = when {
-        snap.gear != Gear.D -> "출발하면 회생 제동을 기록해요"
+        snap.gear != Gear.D -> "출발하면 돌아오는 전기를 기록해요"
         hardBrake -> "급제동이에요\n조금 더 일찍 페달을 떼보세요"
-        braking -> "회생 중이에요\n페달을 부드럽게 유지하세요"
-        else -> "앞차와 거리를 두고\n가속 페달을 떼면 회생이 시작돼요"
+        braking -> "전기가 돌아오는 중이에요\n페달을 부드럽게 유지하세요"
+        else -> "앞차와 거리를 두고\n가속 페달을 떼면 전기가 돌아와요"
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -156,7 +156,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             .border(3.dp, Ink.copy(alpha = regenBorderAlpha * 0.8f), RoundedCornerShape(28.dp)),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            TileLabel("이번 주행에서 회생 제동으로 아낀 돈")
+                            TileLabel("이번 주행에서 되찾은 전기요금 · 추정")
                             // 데모 중엔 가짜 데이터라는 걸 화면에 남겨 둔다
                             if (isDemo) {
                                 Spacer(Modifier.width(12.dp))
@@ -171,8 +171,8 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "${(trip.regenKwh * 1000).fmt(0)}Wh 되찾음 · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
-                                    (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더 아꼈어요" else " · 지난 주행보다 ${-it}원 적어요" } ?: ""),
+                                "되찾은 전기 약 ${(trip.regenKwh * 1000).fmt(0)}Wh · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
+                                    (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더 되찾았어요" else " · 지난 주행보다 ${-it}원 적어요" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             )
                         }
@@ -193,7 +193,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                         ) {
                             Box(Modifier.size(10.dp).clip(CircleShape).background(Ink))
                             Spacer(Modifier.width(8.dp))
-                            Text("회생 중", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
+                            Text("되찾는 중", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
                         }
                     }
                 }
