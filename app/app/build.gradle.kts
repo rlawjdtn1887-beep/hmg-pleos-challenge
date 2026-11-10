@@ -18,10 +18,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // 공모전 제출용 "실행 가능한 release 빌드"를 만들기 위해 디버그 키로 서명한다.
+        // 정식 배포용 키는 아니고, 심사용 APK가 adb install로 바로 깔리게 하는 용도
+        getByName("debug") {}
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

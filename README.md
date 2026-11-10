@@ -7,12 +7,9 @@
 
 ## 다운로드
 
-| 버전 | 날짜 | APK | 비고 |
-|------|------|-----|------|
-| <!-- v0.1.0 --> | <!-- 2026-11-XX --> | <!-- Release에 업로드 후 링크 --> | 첫 데모용 APK 빌드 후 작성 |
-
-> APK는 저장소 코드가 아닌 [Releases](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases)에 첨부합니다.
-> 최신 버전: [Latest Release](https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge/releases/latest)
+- **팀명**: 백투터퓨쳐
+- **앱 이름**: EcoFit
+- **APK**: [`apk/백투터퓨쳐_ecofit_release.apk`](apk/백투터퓨쳐_ecofit_release.apk) (release 빌드, adb install로 바로 설치 가능)
 
 ## 앱 소개
 
@@ -27,10 +24,15 @@ EcoFit은 Pleos Vehicle SDK로 배터리·회생제동·공조 데이터를 실�
 - **실시간 회생 게이지** — 브레이크를 밟을 때마다 회수되는 에너지를 즉시 확인 (실측: 브레이크 1회 0.65kWh / 226원 회수)
 - **상황별 코칭** — "외기 12°C 미만이면 히터 대신 시트 열선 켜면 +8km" 같은 구체적 제안
 - **돈 환산 리포트** — 아낀 전기를 원화·커피잔·추가 주행거리로 변환해 홈 화면에 노출
+- **음성 코칭(TTS)** — 운전 중 화면을 안 봐도 절약 금액·급제동·배터리 부족을 음성으로 안내. 출발 전엔 목적지 브리핑을, 주행 후엔 리포트 요약을 먼저 말해줌
+- **출발 전 충전 판단** — 목적지까지 거리와 도착 후 남는 배터리를 미리 계산하고, 부족하면 탭 한 번으로 내비 앱의 "주변 충전소" 화면까지 바로 전환
+- **실시간 데모 모드** — 운전 없이도 홈 화면 버튼 한 번으로 약 45초짜리 주행 시나리오를 재생해 전체 기능을 바로 시연
 
 ### Pleos SDK 활용
 
-EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(주행거리) · DrivingMode를 직접 사용하며, SDK에 없는 속도·기어·외기온은 AAOS CarPropertyManager로 보완했습니다.
+- **Vehicle SDK** — EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(주행거리) · DrivingMode. SDK에 없는 속도·기어·외기온은 AAOS CarPropertyManager로 보완
+- **NaviHelper SDK** — 목적지까지 거리·도착 예정 시간 수신, 배터리 부족 시 내비 앱의 "주변 충전소" 화면으로 바로 연결
+- **TextToSpeech SDK** — ON_DEVICE 모드로 별도 앱 등록 키 없이 음성 코칭을 전 화면에 적용
 
 ## 스크린샷 / 시연
 
@@ -39,6 +41,38 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 | ![홈](docs/03_design/assets/screen-home.png) | ![출발 전](docs/03_design/assets/screen-briefing.png) | ![주행 중](docs/03_design/assets/screen-drive.png) | ![리포트](docs/03_design/assets/screen-report.png) |
 
 > 시연영상: [docs/05_submission/demo-video/](docs/05_submission/demo-video/)에 추가 예정
+
+## 실행 방법
+
+1. [`apk/백투터퓨쳐_ecofit_release.apk`](apk/백투터퓨쳐_ecofit_release.apk)를 내려받습니다.
+2. AAOS(Android Automotive) 기기 또는 에뮬레이터에 설치합니다.
+   ```bash
+   adb install apk/백투터퓨쳐_ecofit_release.apk
+   ```
+3. 앱 목록에서 **EcoFit**을 실행합니다.
+4. 첫 실행 시 안내 투어가 뜹니다. 홈 화면의 **"데모 주행 보기"** 버튼을 누르면 실제 운전 없이
+   약 45초짜리 시나리오로 회생 제동·음성 코칭·리포트까지 전체 흐름을 바로 확인할 수 있습니다.
+
+### 소스에서 직접 빌드하기
+
+```bash
+git clone https://github.com/rlawjdtn1887-beep/hmg-pleos-challenge.git
+cd hmg-pleos-challenge/app
+./gradlew assembleRelease
+# 결과물: app/app/build/outputs/apk/release/app-release.apk
+```
+
+## 테스트 환경 및 필요한 설정
+
+- **Android Automotive OS(AAOS)** 기기 또는 에뮬레이터가 필요합니다. 일반 폰/태블릿에는
+  Vehicle SDK가 요구하는 차량 신호 자체가 없어 설치는 되어도 대부분의 기능이 동작하지 않습니다.
+- 개발·테스트는 **Pleos Playground**(차량 신호 에뮬레이터 포함) 환경에서 진행했습니다.
+- Pleos Playground가 아닌 AAOS 환경에서는 차량 신호(배터리·기어·브레이크 등)가 안 들어와
+  일부 수치가 "확인 중"으로 남을 수 있습니다 — 이때도 **데모 주행 보기**로 차량 신호 없이
+  전체 기능을 테스트할 수 있습니다.
+- 음성 안내(TTS)는 Pleos `TextToSpeech` SDK의 ON_DEVICE 모드를 사용해 별도 앱 등록 키가
+  필요 없지만, 기기에 Pleos CAAS 컴포넌트가 설치되어 있어야 소리가 납니다.
+- 최초 실행 시 차량 속도 조회 권한(`CAR_SPEED`)을 요청하는 팝업이 뜹니다. 허용해 주세요.
 
 ## 팀원
 
@@ -66,7 +100,8 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 .
 ├── README.md               # 저장소 소개 (이 문서)
 ├── CONTRIBUTING.md         # 브랜치·커밋·PR 규칙
-├── app/                    # Android Studio 프로젝트 (아이템 확정 후 생성)
+├── app/                    # Android Studio 프로젝트
+├── apk/                    # 제출용 release APK
 ├── docs/
 │   ├── GUIDE.md            # 팀 GitHub 사용 설명서
 │   ├── 00_contest-info/    # 공모전 요강·일정·심사기준, 제출 조건 체크리스트
@@ -89,7 +124,7 @@ EvBattery(배터리·전비) · Brake(회생제동) · HVAC(공조) · Odometer(
 | 빌드 | AGP 8.8.2, Gradle |
 | 로컬 저장소 | Room 2.6.1 |
 | 비동기 | Kotlinx Coroutines 1.8.1 |
-| Pleos SDK | Vehicle SDK 2.3.2, NaviHelper SDK 3.0.5 |
+| Pleos SDK | Vehicle SDK 2.3.2, NaviHelper SDK 3.0.5, TextToSpeech SDK 3.3.1 |
 | IDE | Android Studio (차량용 에뮬레이터) |
 | 테스트 환경 | Pleos Playground (Pleos Connect v2.1.0) |
 | 협업 | GitHub Issues / Projects / Discussions |
