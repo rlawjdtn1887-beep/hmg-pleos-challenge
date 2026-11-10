@@ -204,17 +204,11 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
                     TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
-                    // 코칭 문구는 짧을 때가 많아서 타일 아래쪽에 남는 여백에 목적지까지 거리를 같이 묶어 채운다
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            coach,
-                            fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
-                            color = if (hardBrake) Amber else Paper,
-                        )
-                        remainingToDestKm?.let {
-                            Text("목적지까지 ${it.fmt(1)}km", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Ice)
-                        }
-                    }
+                    Text(
+                        coach,
+                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
+                        color = if (hardBrake) Amber else Paper,
+                    )
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                     TileLabel("이번 주행")
@@ -227,6 +221,18 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
                             fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                         )
+                    }
+                }
+            }
+            // 코칭 칸에 끼워 넣으니 너무 빽빽해 보여서 따로 얇은 칸 하나로 뺐다.
+            // 높이를 고정해서 위 두 Row가 그만큼만 줄고 나머지는 그대로 50:50 유지
+            Row(Modifier.fillMaxWidth().height(190.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Tile(TileTone.Light, Modifier.fillMaxWidth().fillMaxHeight()) {
+                    TileLabel("목적지까지")
+                    if (remainingToDestKm != null) {
+                        Amount(remainingToDestKm.fmt(1), "km", 56.sp)
+                    } else {
+                        Text("내비에 목적지를 입력하면 여기 떠요", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
                     }
                 }
             }
