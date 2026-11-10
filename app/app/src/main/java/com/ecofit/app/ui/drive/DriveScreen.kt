@@ -198,20 +198,23 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     Column {
                         Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
                         Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
-                        remainingToDestKm?.let {
-                            Text("목적지까지 ${it.fmt(1)}km", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
-                        }
                     }
                 }
             }
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
                     TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
-                    Text(
-                        coach,
-                        fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
-                        color = if (hardBrake) Amber else Paper,
-                    )
+                    // 코칭 문구는 짧을 때가 많아서 타일 아래쪽에 남는 여백에 목적지까지 거리를 같이 묶어 채운다
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            coach,
+                            fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
+                            color = if (hardBrake) Amber else Paper,
+                        )
+                        remainingToDestKm?.let {
+                            Text("목적지까지 ${it.fmt(1)}km", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Ice)
+                        }
+                    }
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
                     TileLabel("이번 주행")
