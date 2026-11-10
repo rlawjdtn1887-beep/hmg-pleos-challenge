@@ -1,5 +1,7 @@
 # 아이디어 후보
 
+> ✅ **최종 선정: EcoFit (에코핏)** — 아이디어 01 REGEN을 발전시킨 회생 제동 코치 앱. 평가 기준과 선정 이유는 [comparison.md](comparison.md)의 결론을 참고하세요.
+
 ## 작성 방법
 
 1. [`_template.md`](_template.md)를 복사해서 새 파일을 만듭니다.
@@ -11,4 +13,4 @@
 
 | 번호 | 제목 | 제안자 | 파일 |
 |------|------|--------|------|
-| 01 | REGEN — 회생제동 효율 피드백 앱 | 김정수 | [idea-01-regen.md](idea-01-regen.md) |
+| 01 | REGEN — 회생제동 효율 피드백 앱 | @rlawjdtn1887-beep | [idea-01-regen.md](idea-01-regen.md) |
