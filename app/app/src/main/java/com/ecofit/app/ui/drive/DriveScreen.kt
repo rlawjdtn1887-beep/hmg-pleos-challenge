@@ -210,26 +210,28 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                         color = if (hardBrake) Amber else Paper,
                     )
                 }
-                // 이번 주행 칸이 아래쪽에 여백이 많이 남아서 반으로 나눠 목적지까지 거리를 같이 넣었다
-                Tile(TileTone.Light, Modifier.weight(0.5f).fillMaxHeight()) {
-                    TileLabel("목적지까지")
-                    if (remainingToDestKm != null) {
-                        Amount(remainingToDestKm.fmt(1), "km", 48.sp)
-                    } else {
-                        Text("목적지 입력하면 여기 떠요", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                // 이번 주행 칸이 아래쪽에 여백이 많이 남아서 위아래로 나눠 목적지까지 거리를 같이 넣었다
+                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
+                        TileLabel("목적지까지")
+                        if (remainingToDestKm != null) {
+                            Amount(remainingToDestKm.fmt(1), "km", 48.sp)
+                        } else {
+                            Text("목적지 입력하면 여기 떠요", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        }
                     }
-                }
-                Tile(TileTone.Light, Modifier.weight(0.5f).fillMaxHeight()) {
-                    TileLabel("이번 주행")
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                        Text("급제동 ${trip.hardBrakeCount}회", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                        // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
-                        val usedWh = (trip.usedKwh * 1000).fmt(0)
-                        Text(
-                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
-                            fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
-                        )
+                    Tile(TileTone.Light, Modifier.weight(1f).fillMaxWidth()) {
+                        TileLabel("이번 주행")
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                            Text("급제동 ${trip.hardBrakeCount}회", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                            // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
+                            val usedWh = (trip.usedKwh * 1000).fmt(0)
+                            Text(
+                                "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
+                                fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                            )
+                        }
                     }
                 }
             }
