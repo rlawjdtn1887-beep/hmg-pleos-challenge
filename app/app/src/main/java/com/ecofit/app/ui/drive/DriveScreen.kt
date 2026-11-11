@@ -100,10 +100,12 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
     val vsLast = lastWonPerKm?.takeIf { trip.distanceKm >= 0.1f }?.let { won - (it * trip.distanceKm).roundToInt() }
-    // 리포트에서만 보여주던 전비 비교를 주행 중에도 실시간으로. 짧은 거리에선 비율이 튀니 1km부터
+    // 리포트에서만 보여주던 전비 비교를 주행 중에도 실시간으로. 짧은 거리에선 비율이 튀니 1km부터.
+    // 데모는 전체 주행이 1km가 안 돼서 못 보일 수 있어 데모 중엔 기준을 낮춘다
     val netUsedKwh = trip.usedKwh - trip.regenKwh
     val liveEffKmPerKwh = if (netUsedKwh > 0.01f) trip.distanceKm / netUsedKwh else null
-    val liveVsBaseline = liveEffKmPerKwh?.takeIf { trip.distanceKm >= 1f }
+    val liveEffMinKm = if (isDemo) 0.15f else 1f
+    val liveVsBaseline = liveEffKmPerKwh?.takeIf { trip.distanceKm >= liveEffMinKm }
         ?.let { ((it - Coaching.BASELINE_KM_PER_KWH) / Coaching.BASELINE_KM_PER_KWH * 100).roundToInt() }
     val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
     // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다

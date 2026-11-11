@@ -63,7 +63,7 @@ class EcoFitApp : Application() {
         }
         appScope.launch {
             vehicleRepo.snapshot.collect { s ->
-                recorder.feed(s)?.let { trip ->
+                recorder.feed(s, isDemo = vehicleRepo.isDemo.value)?.let { trip ->
                     db.tripDao().insert(trip.toEntity())
                 }
                 // 데모 중엔 달린 거리만큼 가짜 목적지까지 남은 거리를 줄인다

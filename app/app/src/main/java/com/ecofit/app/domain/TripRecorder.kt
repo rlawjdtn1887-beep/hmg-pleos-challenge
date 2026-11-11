@@ -28,6 +28,8 @@ class TripRecorder(
     private val minTripKm: Float = 0.3f,
     private val hardBrakeDecel: Float = 4.0f,
     private val hardAccelMps2: Float = 3.0f,
+    // 데모 대본의 가속 구간이 3.0 근처라 절반쯤만 걸려서, 데모에서는 더 낮은 값으로 확실히 잡는다
+    private val demoHardAccelMps2: Float = 2.0f,
     private val windowMs: Long = 1000,
     private val eventGapMs: Long = 3000,
 ) {
@@ -57,7 +59,7 @@ class TripRecorder(
         var lastAccelEventMs = Long.MIN_VALUE / 2
     }
 
-    fun feed(s: VehicleSnapshot): TripData? {
+    fun feed(s: VehicleSnapshot, isDemo: Boolean = false): TripData? {
         val p = prev
         prev = s
         if (p == null) return null
@@ -103,7 +105,8 @@ class TripRecorder(
                 if (-accel >= hardBrakeDecel && now - a.lastBrakeEventMs >= eventGapMs) {
                     a.hardBrake++; a.lastBrakeEventMs = now
                 }
-                if (accel >= hardAccelMps2 && now - a.lastAccelEventMs >= eventGapMs) {
+                val accelThreshold = if (isDemo) demoHardAccelMps2 else hardAccelMps2
+                if (accel >= accelThreshold && now - a.lastAccelEventMs >= eventGapMs) {
                     a.hardAccel++; a.lastAccelEventMs = now
                 }
                 a.winTimeMs = now; a.winSpeed = v1
