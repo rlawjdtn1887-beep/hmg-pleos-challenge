@@ -13,4 +13,6 @@
 
 | 주차 | 기간 | 팀원 | 파일 |
 |------|------|------|------|
-| 1주차 | 2026-10-30 ~ 2026-11-01 | 김정수 | [week01-rlawjdtn1887-beep.md](week01-rlawjdtn1887-beep.md) |
+| 1주차 | 2026-10-30 ~ 2026-11-01 | 개발 (@rlawjdtn1887-beep) | [week01-rlawjdtn1887-beep.md](week01-rlawjdtn1887-beep.md) |
+| 2주차 | 2026-11-02 ~ 2026-11-08 | 기획 (@darongki37) | [week02-darongki37.md](week02-darongki37.md) |
+| 3주차 | 2026-11-09 ~ 2026-11-15 | 기획 (@darongki37) | [week03-darongki37.md](week03-darongki37.md) |
