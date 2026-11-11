@@ -100,10 +100,17 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
     val vsLast = lastWonPerKm?.takeIf { trip.distanceKm >= 0.1f }?.let { won - (it * trip.distanceKm).roundToInt() }
+    // 리포트에서만 보여주던 전비 비교를 주행 중에도 실시간으로. 짧은 거리에선 비율이 튀니 1km부터
+    val netUsedKwh = trip.usedKwh - trip.regenKwh
+    val liveEffKmPerKwh = if (netUsedKwh > 0.01f) trip.distanceKm / netUsedKwh else null
+    val liveVsBaseline = liveEffKmPerKwh?.takeIf { trip.distanceKm >= 1f }
+        ?.let { ((it - Coaching.BASELINE_KM_PER_KWH) / Coaching.BASELINE_KM_PER_KWH * 100).roundToInt() }
     val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
     // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다
     val braking = (snap.brakePedalPercent ?: 0f) > 10f
     val hardBrake = trip.hardBraking
+    val hardAccel = trip.hardAccelerating
+    val warning = hardBrake || hardAccel
 
     // 회생 한 번이 끝날 때마다 그동안 모은 금액을 잠깐 띄운다
     var episodeStartKwh by remember { mutableFloatStateOf(trip.regenKwh) }
@@ -122,6 +129,9 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     // 운전 중 음성은 고쳐야 할 게 있을 때만. 급제동이 잡히면 바로 말하고 15초 안엔 다시 안 한다
     LaunchedEffect(hardBrake) {
         if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000)
+    }
+    LaunchedEffect(hardAccel) {
+        if (hardAccel) app.ttsRepo.speak("천천히 밟아보세요", interrupt = true, key = "accel", minGapMs = 15_000)
     }
     // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다.
     // 데모 중 실제로 충전소 화면을 띄우는 건 EcoFitApp의 앱 스코프에서 한다 — 여기서 하면
@@ -144,6 +154,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val coach = when {
         snap.gear != Gear.D -> "출발하면 돌아오는 전기를 기록해요"
         hardBrake -> "급제동이에요\n조금 더 일찍 페달을 떼보세요"
+        hardAccel -> "급가속이에요\n천천히 밟으면 전비가 좋아져요"
         braking -> "전기가 돌아오는 중이에요\n페달을 부드럽게 유지하세요"
         else -> "앞차와 거리를 두고\n가속 페달을 떼면 전기가 돌아와요"
     }
@@ -177,6 +188,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "되찾은 전기 약 ${(trip.regenKwh * 1000).fmt(0)}Wh · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
+                                    (liveVsBaseline?.let { " · 전비 ${it.signed()}%" } ?: "") +
                                     (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더 되찾았어요" else " · 지난 주행보다 ${-it}원 적어요" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             )
@@ -224,11 +236,11 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
             }
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight(), watermark = true) {
-                    TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
+                    TileLabel(if (warning) "주의" else "코칭", color = if (warning) Amber else Ice)
                     Text(
                         coach,
                         fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 58.sp,
-                        color = if (hardBrake) Amber else Paper,
+                        color = if (warning) Amber else Paper,
                     )
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {

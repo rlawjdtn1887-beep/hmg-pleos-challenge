@@ -16,6 +16,7 @@ data class LiveTrip(
     val hardBrakeCount: Int = 0,
     val hardAccelCount: Int = 0,
     val hardBraking: Boolean = false,
+    val hardAccelerating: Boolean = false,
 )
 
 // 시작: P/N -> D/R, 종료: D/R -> P. 최소 거리 미만이면 버린다.
@@ -123,11 +124,12 @@ class TripRecorder(
             hardBrakeCount = a.hardBrake,
             hardAccelCount = a.hardAccel,
             hardBraking = now - a.lastBrakeEventMs < 2000,
+            hardAccelerating = now - a.lastAccelEventMs < 2000,
         )
 
         if (wasDriving && !isDriving) {
             acc = null
-            _live.value = _live.value.copy(active = false, hardBraking = false)
+            _live.value = _live.value.copy(active = false, hardBraking = false, hardAccelerating = false)
             if (dist < minTripKm) return null
 
             // 소모량 확정 순서: 배터리 kWh 차이 > SoC 차이 x 용량 > 전비로 쌓은 값

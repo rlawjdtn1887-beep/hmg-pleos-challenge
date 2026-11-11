@@ -80,6 +80,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val seatHeat = (snap.driverSeatHeatLevel ?: 0) > 0
     val passengerSeatHeat = (snap.passengerSeatHeatLevel ?: 0) > 0
     val coldHvacOn = outside != null && outside < 12f && hvacOn
+    val hotHvacOn = outside != null && outside > 28f && hvacOn
+    // 충전 중엔 전력을 배터리가 아니라 충전기에서 끌어 쓸 수 있어서, 추울 때 미리 예열해두면 이득이다
+    val preconditionWhileCharging = snap.isCharging == true && outside != null && outside < 12f && !hvacOn
 
     val tips = buildList {
         when {
@@ -90,6 +93,10 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
             coldHvacOn && !passengerSeatHeat ->
                 add(Tip("조수석 열선을 켜고 난방 온도를 낮추면 동승자도 더 아낄 수 있어요"))
         }
+        if (preconditionWhileCharging)
+            add(Tip("충전 중일 때 미리 예열하면 배터리를 안 쓰고 따뜻하게 출발할 수 있어요"))
+        if (hotHvacOn)
+            add(Tip("에어컨을 세게 틀면 배터리를 많이 써요. 자동 모드로 두면 더 오래 갈 수 있어요"))
         val chargeTip = when {
             margin != null && margin < 0f -> "이대로는 ${(-margin).fmtKmOrM()} 모자라요. 탭해서 충전소를 찾아보세요"
             low -> "여유가 ${margin!!.fmtKmOrM()}뿐이에요. 탭해서 충전소를 찾아보세요"
