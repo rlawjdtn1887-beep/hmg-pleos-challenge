@@ -29,6 +29,9 @@ import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.fmt
+import com.ecofit.app.ui.fmtKmOrM
+import com.ecofit.app.ui.fmtKmOrMKorean
+import com.ecofit.app.ui.kmOrMParts
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
@@ -88,8 +91,8 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                 add(Tip("조수석 열선을 켜고 난방 온도를 낮추면 동승자도 더 아낄 수 있어요"))
         }
         val chargeTip = when {
-            margin != null && margin < 0f -> "이대로는 ${(-margin).fmt(0)}km 모자라요. 탭해서 충전소를 찾아보세요"
-            low -> "여유가 ${margin!!.fmt(0)}km뿐이에요. 탭해서 충전소를 찾아보세요"
+            margin != null && margin < 0f -> "이대로는 ${(-margin).fmtKmOrM()} 모자라요. 탭해서 충전소를 찾아보세요"
+            low -> "여유가 ${margin!!.fmtKmOrM()}뿐이에요. 탭해서 충전소를 찾아보세요"
             else -> null
         }
         chargeTip?.let {
@@ -110,9 +113,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     LaunchedEffect(Unit) {
         val destPart = when {
             dest == null -> "목적지를 입력하면 배터리가 충분한지 알려드려요."
-            margin == null -> "목적지까지 ${dest.fmt(0)}킬로미터예요."
-            low -> "목적지까지 ${dest.fmt(0)}킬로미터, 도착하면 ${margin.fmt(0)}킬로미터밖에 안 남아요. 충전이 필요할 수 있어요."
-            else -> "목적지까지 ${dest.fmt(0)}킬로미터, 도착하면 ${margin.fmt(0)}킬로미터가 남아요."
+            margin == null -> "목적지까지 ${dest.fmtKmOrMKorean()}예요."
+            low -> "목적지까지 ${dest.fmtKmOrMKorean()}, 도착하면 ${margin.fmtKmOrMKorean()}밖에 안 남아요. 충전이 필요할 수 있어요."
+            else -> "목적지까지 ${dest.fmtKmOrMKorean()}, 도착하면 ${margin.fmtKmOrMKorean()}가 남아요."
         }
         val rangePart = range?.let { "지금 남은 주행거리는 ${it.fmt(0)}킬로미터예요." }.orEmpty()
         val tipsPart = tips.joinToString(". ") { it.text }
@@ -132,8 +135,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                     }
                     margin == null -> {
                         TileLabel(destName?.let { "$it 까지" } ?: "목적지까지")
+                        val (destVal, destUnit) = dest.kmOrMParts()
                         Column {
-                            Amount(dest.fmt(0), "km", 150.sp)
+                            Amount(destVal, destUnit, 150.sp)
                             Text("남은 주행거리 확인 중", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                             expectedText?.let { Text(it, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
                         }
@@ -143,10 +147,11 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                             if (low) "충전이 필요할 수 있어요" else "목적지에 도착해도 남는 거리",
                             color = if (low) Amber else InkMuted,
                         )
+                        val (marginVal, marginUnit) = margin.kmOrMParts()
                         Column {
-                            Amount(margin.fmt(0), "km", 150.sp)
+                            Amount(marginVal, marginUnit, 150.sp)
                             Text(
-                                "${destName ?: "목적지"} ${dest.fmt(0)}km" + (etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""),
+                                "${destName ?: "목적지"} ${dest.fmtKmOrM()}" + (etaMin?.let { " · 도착 약 ${it}분 후" } ?: ""),
                                 fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             )
                             expectedText?.let {
@@ -182,7 +187,7 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
                     Text("조수석 열선 " + if (passengerSeatHeat) "켜짐" else "꺼짐", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
+            Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight(), watermark = true) {
                 TileLabel("출발 전 제안", color = Ice)
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     tips.forEach { tip ->

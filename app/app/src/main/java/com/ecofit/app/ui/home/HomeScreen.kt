@@ -31,11 +31,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ecofit.app.EcoFitApp
 import com.ecofit.app.data.local.toModel
 import com.ecofit.app.data.model.TripData
+import com.ecofit.app.domain.Coaching
 import com.ecofit.app.domain.EcoScore
 import com.ecofit.app.domain.MoneyUnits
 import com.ecofit.app.domain.TripSavings
 import com.ecofit.app.ui.Amount
-import com.ecofit.app.ui.ProgressBar
+import com.ecofit.app.ui.BatteryGauge
 import com.ecofit.app.ui.RingGauge
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
@@ -44,6 +45,7 @@ import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.signed
+import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
 import com.ecofit.app.ui.theme.InkMuted
@@ -215,11 +217,15 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 Column {
                     Amount(soc?.fmt(0) ?: "—", "%", 96.sp)
                     Spacer(Modifier.height(14.dp))
-                    ProgressBar((soc ?: 0f) / 100f, track = Ink.copy(alpha = 0.1f), fill = Ink)
+                    // 주행 중 화면과 같은 배터리 모양 게이지로 통일
+                    BatteryGauge(
+                        fraction = (soc ?: 0f) / 100f,
+                        fill = if (Coaching.isLowBattery(soc)) Amber else Ice,
+                    )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         range?.let { "남은 거리 ${it.fmt(0)}km" } ?: "남은 거리 확인 중",
-                        fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     )
                 }
             }

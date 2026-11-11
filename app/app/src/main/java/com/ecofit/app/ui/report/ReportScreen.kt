@@ -149,7 +149,9 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${shown.distanceKm.fmt(1)}km · ${shown.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
-                                (s.vsBaselinePercent?.let { " · 전비 ${it.signed()}%" } ?: ""),
+                                // 거리가 짧으면 전비 비율이 0 근처로 튀어서 "-100%"처럼 의미 없는 극단값이 나온다.
+                                // 1km는 넘어야 비율이 안정적이라 그 아래에선 아예 안 보여준다
+                                (s.vsBaselinePercent?.takeIf { shown.distanceKm >= 1f }?.let { " · 전비 ${it.signed()}%" } ?: ""),
                             fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
                         )

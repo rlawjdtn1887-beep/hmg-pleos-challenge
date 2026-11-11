@@ -81,15 +81,22 @@ class DemoVehicleRepository(
         if (job?.isActive == true) return
         _isConnected.value = true
         val runScript = script.map { it.jittered() }
+        val totalTicks = runScript.sumOf { it.sec * TICKS_PER_SEC }
         job = scope.launch {
             var speed = 0f
+            var elapsedTicks = 0
             for (step in runScript) {
                 val from = speed
                 val ticks = step.sec * TICKS_PER_SEC
                 for (i in 1..ticks) {
                     delay(1000L / TICKS_PER_SEC)
+                    elapsedTicks++
                     speed = from + (step.targetKmh - from) * i / ticks
                     val dtH = 1f / TICKS_PER_SEC / 3600f
+                    // 배터리를 끝까지 72%로 고정해 두면 저배터리 알림·충전소 안내를 데모로 보여줄 수가 없어서,
+                    // 대본 진행률에 맞춰 72% -> 14%로 서서히 줄어들게 한다 (거의 끝날 때쯤 20% 아래로 떨어짐)
+                    val progress = elapsedTicks.toFloat() / totalTicks
+                    val soc = START_SOC - progress * (START_SOC - END_SOC)
                     _snapshot.update { s ->
                         s.copy(
                             timestampMs = System.currentTimeMillis(),
@@ -97,6 +104,9 @@ class DemoVehicleRepository(
                             gear = step.gear,
                             brakePedalPercent = step.brake,
                             odometerKm = (s.odometerKm ?: 0f) + speed * dtH,
+                            batterySocPercent = soc,
+                            remainingRangeKm = START_RANGE_KM * soc / START_SOC,
+                            batteryEnergyKwh = START_ENERGY_KWH * soc / START_SOC,
                         )
                     }
                 }
@@ -114,5 +124,9 @@ class DemoVehicleRepository(
 
     private companion object {
         const val TICKS_PER_SEC = 4
+        const val START_SOC = 72f
+        const val END_SOC = 14f
+        const val START_RANGE_KM = 288f
+        const val START_ENERGY_KWH = 55.7f
     }
 }

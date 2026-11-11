@@ -46,13 +46,16 @@ import com.ecofit.app.domain.Coaching
 import com.ecofit.app.domain.RegenHistory
 import com.ecofit.app.data.model.Gear
 import com.ecofit.app.ui.Amount
+import com.ecofit.app.ui.BatteryGauge
 import com.ecofit.app.ui.ProgressBar
+import com.ecofit.app.ui.WarningTriangle
 import com.ecofit.app.ui.Tile
 import com.ecofit.app.ui.TileLabel
 import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
+import com.ecofit.app.ui.fmtKmOrM
 import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.theme.Amber
@@ -120,13 +123,15 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     LaunchedEffect(hardBrake) {
         if (hardBrake) app.ttsRepo.speak("조금 더 일찍 페달을 떼 보세요", interrupt = true, key = "brake", minGapMs = 15_000)
     }
-    // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다
+    // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다.
+    // 데모 중 실제로 충전소 화면을 띄우는 건 EcoFitApp의 앱 스코프에서 한다 — 여기서 하면
+    // 데모가 곧장 P로 끝나며 이 화면이 사라질 때 지연 호출이 함께 취소돼 버린다
     var lowBatterySpoken by remember { mutableStateOf(false) }
     LaunchedEffect(trip.active) { if (!trip.active) lowBatterySpoken = false }
     LaunchedEffect(snap.batterySocPercent) {
         if (trip.active && !lowBatterySpoken && Coaching.isLowBattery(snap.batterySocPercent)) {
             lowBatterySpoken = true
-            app.ttsRepo.speak("배터리가 20% 아래예요. 세우면 가까운 충전소를 안내할게요", interrupt = true)
+            app.ttsRepo.speak("배터리가 20% 아래예요. 가까운 충전소를 찾아드릴게요", interrupt = true)
         }
     }
     LaunchedEffect(popupVisible, popupWon) {
@@ -198,15 +203,27 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     }
                 }
                 Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight()) {
-                    TileLabel("지금 속도")
+                    // 속도·기어는 클러스터 화면에 항상 떠 있어서 중복. 주행 중엔 안 보이던
+                    // 배터리·남은 거리로 대체 (저배터리 음성 알림과도 짝이 맞음)
+                    TileLabel("지금 배터리")
                     Column {
-                        Amount(snap.speedKmh?.fmt(0) ?: "—", "km/h", 96.sp)
-                        Text("기어 ${snap.gear}", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                        Amount(snap.batterySocPercent?.fmt(0) ?: "—", "%", 96.sp)
+                        Spacer(Modifier.height(10.dp))
+                        BatteryGauge(
+                            fraction = (snap.batterySocPercent ?: 0f) / 100f,
+                            fill = if (Coaching.isLowBattery(snap.batterySocPercent)) Amber else Ice,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            snap.remainingRangeKm?.takeIf { it > 0f }?.let { "남은 거리 ${it.fmt(0)}km" }
+                                ?: "남은 거리 확인 중",
+                            fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                        )
                     }
                 }
             }
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight()) {
+                Tile(TileTone.Dark, Modifier.weight(2f).fillMaxHeight(), watermark = true) {
                     TileLabel(if (hardBrake) "주의" else "코칭", color = if (hardBrake) Amber else Ice)
                     Text(
                         coach,
@@ -218,11 +235,17 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                     TileLabel("이번 주행")
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${trip.distanceKm.fmt(1)}km · ${trip.durationSec.durationText()}", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                        Text("급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            WarningTriangle(tint = if (trip.hardBrakeCount > 0) Amber else InkMuted.copy(alpha = 0.35f))
+                            Text(
+                                "급제동 ${trip.hardBrakeCount}회", fontSize = 32.sp, fontWeight = FontWeight.Bold,
+                                color = if (trip.hardBrakeCount > 0) Amber else Ink,
+                            )
+                        }
                         // 내비 목적지가 있으면 남은 거리도 같이 보여준다
                         destKm?.takeIf { it > 0f }?.let { d ->
                             Text(
-                                "${destName ?: "목적지"}까지 ${d.fmt(1)}km" + (etaMin?.let { " · 약 ${it}분" } ?: ""),
+                                "${destName ?: "목적지"}까지 ${d.fmtKmOrM()}" + (etaMin?.let { " · 약 ${it}분" } ?: ""),
                                 fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                             )
                         }
