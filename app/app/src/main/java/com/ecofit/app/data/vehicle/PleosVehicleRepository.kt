@@ -10,6 +10,7 @@ import ai.pleos.playground.vehicle.listener.DrivingModeStateListener
 import ai.pleos.playground.vehicle.listener.DrivingTimeListener
 import ai.pleos.playground.vehicle.listener.EvBatteryEfficiencyListener
 import ai.pleos.playground.vehicle.listener.EvBatteryStateOfChargeListener
+import ai.pleos.playground.vehicle.listener.EvChargePortOpenListener
 import ai.pleos.playground.vehicle.listener.HvacFanSpeedListener
 import ai.pleos.playground.vehicle.listener.HvacPowerStateListener
 import ai.pleos.playground.vehicle.listener.HvacSeatTemperatureListener
@@ -40,8 +41,10 @@ import kotlinx.coroutines.flow.update
  *  - remainingRangeKm 은 EvBattery 가 아니라 Odometer.registerRangeRemainingListener 에 있음
  *  - Brake 는 페달 위치(%) API가 없고 getCurrentBrakePedalStatus/registerBrakePedalStatus 가
  *    Boolean(밟음/안 밟음)만 줌 -> brakePedalPercent 는 0f/100f 로만 근사 가능
- *  - batteryEnergyKwh(순간 잔존 kWh), isCharging, HVAC 의 outsideTempC 에 대응하는 API가
+ *  - batteryEnergyKwh(순간 잔존 kWh), HVAC 의 outsideTempC 에 대응하는 API가
  *    SDK에 없음 -> null 유지 (차종/에뮬레이터가 늘려주면 그때 다시 확인)
+ *  - isCharging: getEvChargeSwitchState()가 의미상 더 정확하지만 콜백 한 번뿐이라 실시간
+ *    반영이 안 됨. 대신 registerEvChargePortOpen(충전 포트 열림)을 proxy로 써서 실시간으로 받는다
  *  - vehicle.getHvac() 아님, vehicle.getHVAC() (SDK 클래스명이 전부 대문자)
  */
 class PleosVehicleRepository(context: Context) : VehicleRepository {
@@ -81,6 +84,14 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
             _snapshot.update { it.copy(evEfficiencyKmPerKwh = value, timestampMs = now()) }
         }
         override fun onFailed(e: Exception) = logFailure("CurrentEvEfficiency", e)
+    }
+
+    // 포트가 열려있다 = 충전 케이블이 꽂혀 충전 중이라고 본다 (isCharging 대응 API가 따로 없어 이걸로 근사)
+    private val evChargePortOpenListener = object : EvChargePortOpenListener {
+        override fun onEvChargePortOpenUpdated(value: Boolean?) {
+            _snapshot.update { it.copy(isCharging = value, timestampMs = now()) }
+        }
+        override fun onFailed(e: Exception) = logFailure("EvChargePortOpen", e)
     }
 
     private val rangeRemainingListener = object : RangeRemainingListener {
@@ -196,6 +207,7 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
             vehicle.getEvBattery().apply {
                 unregisterEvBatteryStateOfCharge(evBatterySocListener)
                 unregisterCurrentEvEfficiency(evEfficiencyListener)
+                unregisterEvChargePortOpen(evChargePortOpenListener)
             }
             vehicle.getBrake().unregisterBrakePedalStatus(brakePedalListener)
             vehicle.getDrivingMode().unregisterDrivingModeState(drivingModeListener)
@@ -228,11 +240,12 @@ class PleosVehicleRepository(context: Context) : VehicleRepository {
         val ev = vehicle.getEvBattery()
         ev.registerEvBatteryStateOfCharge(evBatterySocListener)
         ev.registerCurrentEvEfficiency(evEfficiencyListener)
+        ev.registerEvChargePortOpen(evChargePortOpenListener)
         ev.getEvBatteryCapacity(
             { capacity -> _snapshot.update { it.copy(batteryCapacityKwh = capacity, timestampMs = now()) } },
             { e -> logFailure("EvBatteryCapacity", e) },
         )
-        // batteryEnergyKwh(순간 잔존 kWh), isCharging: 대응 API 없음 -> null 유지
+        // batteryEnergyKwh(순간 잔존 kWh): 대응 API 없음 -> null 유지
     }
 
     private fun registerBrake() {
