@@ -134,11 +134,13 @@ fun EcoFitNav(onRequestSpeedPermission: () -> Boolean = { false }) {
         }
     }
 
-    // 기어가 바뀌면 화면도 따라간다. 출발하면 주행 중, 세우면 리포트
+    // 기어가 바뀌면 화면도 따라간다. 출발하면 주행 중, 세우면 리포트.
+    // N은 "진짜 기어 변화"로 안 치고 prevGear를 안 덮어써서, D -> N -> P로 세워도
+    // (중간에 N을 거쳐도) 바로 전 D/R을 기억하고 있어 리포트로 넘어간다
     LaunchedEffect(snap.gear) {
         val g = snap.gear
         val p = prevGear
-        prevGear = g
+        if (g != Gear.N) prevGear = g
         if (p == null) return@LaunchedEffect
         val driving = g == Gear.D || g == Gear.R
         val wasDriving = p == Gear.D || p == Gear.R
