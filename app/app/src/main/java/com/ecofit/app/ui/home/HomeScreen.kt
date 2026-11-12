@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -153,10 +154,14 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight().tourTarget("home.score")) {
                 TileLabel("이번 주 에코 점수")
+                // 점수가 낮을수록 경고색(Amber)에, 높을수록 기본색(Ice)에 가깝게 — 링 색만 봐도 잘 타고 있는지 느껴지게.
+                // Amber↔Ice를 0~100 전체로 섞으면 중간 지점에서 보색끼리 뒤섞여 탁한 회색이 돼서,
+                // "좋아요" 기준인 70점부터는 아예 선명한 Ice로 고정하고 그 아래 구간에서만 섞는다
+                val scoreColor = lerp(Amber, Ice, (((avgScore ?: 0) / 70f)).coerceIn(0f, 1f))
                 RingGauge(
                     fraction = (avgScore ?: 0) / 100f,
                     track = Ink.copy(alpha = 0.08f),
-                    fill = Ice,
+                    fill = scoreColor,
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 10.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -182,7 +187,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 TileLabel("되찾은 에너지")
                 Amount(s.regenKwh.fmt(2), "kWh", 96.sp)
             }
-            Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
+            Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight(), watermark = true) {
                 TileLabel("이대로 달리면")
                 if (tripCount == 0) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
