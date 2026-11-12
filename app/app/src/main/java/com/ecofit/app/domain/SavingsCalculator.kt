@@ -10,6 +10,7 @@ data class TripSavings(
     val coffeeCups: Float,
     val efficiencyKmPerKwh: Float?,
     val vsBaselinePercent: Int?,
+    val distanceKm: Float,
 )
 
 /**
@@ -34,6 +35,7 @@ class SavingsCalculator(
             coffeeCups = savedWon / coffeeWon,
             efficiencyKmPerKwh = eff,
             vsBaselinePercent = vsBaseline,
+            distanceKm = trip.distanceKm,
         )
     }
 
@@ -50,6 +52,7 @@ class SavingsCalculator(
             coffeeCups = savedWon / coffeeWon,
             efficiencyKmPerKwh = eff,
             vsBaselinePercent = eff?.let { ((it - baselineKmPerKwh) / baselineKmPerKwh * 100).roundToInt() },
+            distanceKm = totalDist,
         )
     }
 }

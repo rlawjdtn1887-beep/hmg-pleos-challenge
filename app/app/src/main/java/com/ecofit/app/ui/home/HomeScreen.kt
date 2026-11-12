@@ -168,7 +168,9 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                     }
                 }
                 Text(
-                    s.efficiencyKmPerKwh?.let { "평균 전비 ${it.fmt(1)} km/kWh" + (s.vsBaselinePercent?.let { p -> " · 기준 대비 ${p.signed()}%" } ?: "") }
+                    // 이번 주 누적 거리가 짧으면 전비 비율이 "-100%"처럼 의미 없는 값으로 튄다.
+                    // 리포트 화면과 같은 기준(1km)으로 그 아래에선 비율을 안 보여준다
+                    s.efficiencyKmPerKwh?.let { "평균 전비 ${it.fmt(1)} km/kWh" + (s.vsBaselinePercent?.takeIf { s.distanceKm >= 1f }?.let { p -> " · 기준 대비 ${p.signed()}%" } ?: "") }
                         ?: "주행 ${tripCount}회 평균",
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
