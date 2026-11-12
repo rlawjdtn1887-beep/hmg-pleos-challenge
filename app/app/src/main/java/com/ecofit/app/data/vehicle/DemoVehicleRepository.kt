@@ -42,6 +42,8 @@ class DemoVehicleRepository(
             fanSpeed = 2,
             driverSeatHeatLevel = 0,
             passengerSeatHeatLevel = 0,
+            // 전비를 넣어 둬야 소모량이 거리 기준으로 계산된다. 없으면 연출용 배터리 감소가 소모량으로 잡혀 숫자가 망가진다
+            evEfficiencyKmPerKwh = DEMO_EFFICIENCY,
         )
     )
     override val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
@@ -50,29 +52,32 @@ class DemoVehicleRepository(
     override val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     // (구간 길이 초, 목표 속도, 브레이크) 순서. 속도는 구간 안에서 선형으로 바뀐다.
+    // 급가속은 맨 처음 0->50km/h 2초(약 7m/s²) 한 번만, 급제동은 65->10km/h 3초(약 5m/s²) 한 번만 걸리게 하고
+    // 나머지 가속은 2.5m/s² 아래로 둔다. ±8% 변동이 붙어도 판정(가속 3.0 / 감속 4.0)이 뒤집히지 않는 값이다
     private val script = listOf(
         Step(2, 0f, 0f, Gear.P),
         Step(1, 0f, 0f, Gear.D),
-        Step(5, 55f, 0f, Gear.D),
-        Step(3, 55f, 0f, Gear.D),
+        Step(2, 50f, 0f, Gear.D),
+        Step(3, 50f, 0f, Gear.D),
         Step(7, 15f, 40f, Gear.D),
-        Step(5, 70f, 0f, Gear.D),
-        Step(2, 70f, 0f, Gear.D),
-        Step(3, 20f, 100f, Gear.D),
-        Step(2, 20f, 0f, Gear.D),
-        Step(4, 60f, 0f, Gear.D),
+        Step(8, 65f, 0f, Gear.D),
+        Step(2, 65f, 0f, Gear.D),
+        Step(3, 10f, 100f, Gear.D),
+        Step(7, 55f, 0f, Gear.D),
+        Step(2, 55f, 0f, Gear.D),
         Step(6, 5f, 35f, Gear.D),
-        Step(3, 0f, 30f, Gear.D),
+        Step(2, 0f, 30f, Gear.D),
         Step(1, 0f, 0f, Gear.D),
         Step(2, 0f, 0f, Gear.P),
     )
 
     private class Step(val sec: Int, val targetKmh: Float, val brake: Float, val gear: Gear) {
         // 매번 똑같이 재생되면 리포트에 똑같은 숫자만 쌓여서 지난 주행 비교가 의미 없어진다.
-        // 구간 길이·목표 속도를 ±15% 흔들어서 실행마다 거리·급제동 여부·회생량이 달라지게 한다
+        // 구간 길이·목표 속도를 ±8% 흔들어서 실행마다 거리·회생량이 달라지게 한다.
+        // 더 크게 흔들면 급가속·급제동 판정이 실행마다 바뀌어 점수가 들쭉날쭉해진다
         fun jittered(): Step {
-            val speedF = Random.nextFloat() * 0.3f + 0.85f
-            val secF = Random.nextFloat() * 0.3f + 0.85f
+            val speedF = Random.nextFloat() * 0.16f + 0.92f
+            val secF = Random.nextFloat() * 0.16f + 0.92f
             return Step((sec * secF).roundToInt().coerceAtLeast(1), targetKmh * speedF, brake, gear)
         }
     }
@@ -128,5 +133,7 @@ class DemoVehicleRepository(
         const val END_SOC = 14f
         const val START_RANGE_KM = 288f
         const val START_ENERGY_KWH = 55.7f
+        // 리포트 전비 비교·에코 점수 보너스에 쓰인다. 기준(4.5)보다 조금 좋은 값
+        const val DEMO_EFFICIENCY = 5.0f
     }
 }

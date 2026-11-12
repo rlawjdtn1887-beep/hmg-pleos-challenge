@@ -65,9 +65,9 @@ fun BriefingScreen(vm: BriefingViewModel = viewModel()) {
     val etaMin by app.naviRepo.remainTimeMin.collectAsStateWithLifecycle()
     val destName by app.naviRepo.destinationName.collectAsStateWithLifecycle()
 
-    // 0은 값을 못 받은 경우로 본다
+    // 0은 값을 못 받은 경우로 본다. 100m 안쪽은 이미 도착한 거라 목적지 없음으로 본다
     val range = snap.remainingRangeKm?.takeIf { it > 0f }
-    val dest = destKm?.takeIf { it > 0f }
+    val dest = destKm?.takeIf { it >= 0.1f }
     val margin = if (range != null && dest != null) range - dest else null
     val low = margin != null && margin < LOW_MARGIN_KM
     val expectedWon = dest?.let { ((wonPerKm ?: RegenHistory.DEFAULT_WON_PER_KM) * it).roundToInt() }

@@ -60,7 +60,6 @@ import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
-import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
@@ -91,6 +90,7 @@ private const val TARGET_KWH = 0.3f
 
 private val timeFmt = SimpleDateFormat("M/d HH:mm", Locale.KOREA)
 private val dayFmt = SimpleDateFormat("M/d", Locale.KOREA)
+private val hourFmt = SimpleDateFormat("HH:mm", Locale.KOREA)
 
 @Composable
 fun ReportScreen(vm: ReportViewModel = viewModel()) {
@@ -115,10 +115,12 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     LaunchedEffect(latest.startTimeMs) {
         val ls = vm.savings(latest)
         val extraKm = Coaching.extraKmWithoutHardBrakes(latest)
-        val tip = if (latest.hardBrakeCount > 0)
-            "급제동 ${latest.hardBrakeCount}번이 없었다면 약 ${extraKm.fmt(1)}킬로미터 더 갈 수 있었어요"
-        else
-            "급제동 없이 부드럽게 달렸어요"
+        val tip = when {
+            latest.hardBrakeCount > 0 && extraKm >= 0.1f ->
+                "급제동 ${latest.hardBrakeCount}번이 없었다면 약 ${extraKm.fmt(1)}킬로미터 더 갈 수 있었어요"
+            latest.hardBrakeCount > 0 -> "급제동이 ${latest.hardBrakeCount}번 있었어요. 다음엔 조금 더 일찍 페달을 떼 보세요"
+            else -> "급제동 없이 부드럽게 달렸어요"
+        }
         val charge = if (Coaching.isLowBattery(latest.endSocPercent)) " 배터리가 부족해요. 충전소 찾기를 눌러 주세요." else ""
         // 주행이 끝났을 때 하는 요약이라 말하던 게 있어도 끊고 말한다
         app.ttsRepo.speak(
@@ -139,10 +141,22 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
     val maxWon = (recent.maxOf { it.second }).coerceAtLeast(1)
 
     val regenWh = (s.regenKwh * 1000).fmt(0)
-    val coachTip = if (shown.hardBrakeCount > 0)
-        "급제동 ${shown.hardBrakeCount}회 · 없었다면 약 ${Coaching.extraKmWithoutHardBrakes(shown).fmt(1)}km 더 갈 수 있었어요"
-    else
-        "급제동 없이 부드럽게 달렸어요 · 이대로 유지하세요"
+    val extraKm = Coaching.extraKmWithoutHardBrakes(shown)
+    val coachTip = when {
+        shown.hardBrakeCount > 0 && extraKm >= 0.1f ->
+            "급제동 ${shown.hardBrakeCount}회 · 없었다면 약 ${extraKm.fmt(1)}km 더 갈 수 있었어요"
+        shown.hardBrakeCount > 0 -> "급제동 ${shown.hardBrakeCount}회 · 조금 더 일찍 페달을 떼 보세요"
+        else -> "급제동 없이 부드럽게 달렸어요 · 이대로 유지하세요"
+    }
+    // 전비 비교는 %가 아니라 "몇 km 더/덜"로. 차 전비가 있고 1km 넘게 달렸을 때만
+    val effLine = s.efficiencyKmPerKwh?.takeIf { shown.distanceKm >= 1f && shown.netEnergyKwh > 0.01f }?.let { eff ->
+        val diffKm = (eff - Coaching.BASELINE_KM_PER_KWH) * shown.netEnergyKwh
+        when {
+            diffKm >= 0.3f -> "평소보다 전기를 아껴서 약 ${diffKm.fmt(1)}km 더 갈 수 있었어요"
+            diffKm <= -0.3f -> "평소보다 전기를 더 써서 약 ${(-diffKm).fmt(1)}km 손해였어요"
+            else -> "평소랑 비슷하게 달렸어요"
+        }
+    }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -157,9 +171,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${shown.distanceKm.fmt(1)}km · ${shown.durationSec.durationText()} · 되찾은 에너지 ${regenWh}Wh" +
-                                // 거리가 짧으면 전비 비율이 0 근처로 튀어서 "-100%"처럼 의미 없는 극단값이 나온다.
-                                // 1km는 넘어야 비율이 안정적이라 그 아래에선 아예 안 보여준다
-                                (s.vsBaselinePercent?.takeIf { shown.distanceKm >= 1f }?.let { " · 전비 ${it.signed()}%" } ?: ""),
+                                (effLine?.let { "\n$it" } ?: ""),
                             fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
                         )
@@ -200,7 +212,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
                 Text(
-                    "동승자 승차감 ${comfortScore(shown.hardBrakeCount, shown.hardAccelCount)}점",
+                    "승차감 ${comfortScore(shown.hardBrakeCount, shown.hardAccelCount)}점",
                     fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
@@ -215,7 +227,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                     ProgressBar(s.regenKwh / TARGET_KWH, track = Ice.copy(alpha = 0.18f), fill = Ice)
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "목표 ${(TARGET_KWH * 1000).toInt()}Wh · ${s.savedKm.fmt(1)}km 더 달릴 수 있는 양",
+                        "목표 ${(TARGET_KWH * 1000).toInt()}Wh" + (if (s.savedKm >= 0.1f) " · ${s.savedKm.fmt(1)}km 더 달릴 수 있는 양" else ""),
                         fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -223,7 +235,7 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                 Column {
                     TileLabel("다음엔 이렇게", color = Amber)
                     Spacer(Modifier.height(6.dp))
-                    Text(coachTip, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 38.sp)
+                    Text(coachTip, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 36.sp)
                 }
             }
             Tile(TileTone.Light, Modifier.weight(1.5f).fillMaxHeight()) {
@@ -242,10 +254,12 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                "${won}원", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+                                "${won}원", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp,
                                 color = if (isSelected) Ice else Ink,
                             )
-                            Text("${tScore}점", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                            Spacer(Modifier.height(4.dp))
+                            Text("${tScore}점", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp, color = InkMuted)
+                            Spacer(Modifier.height(10.dp))
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                                 Box(
                                     Modifier
@@ -259,7 +273,10 @@ fun ReportScreen(vm: ReportViewModel = viewModel()) {
                                         )
                                 )
                             }
-                            Text(dayFmt.format(Date(t.startTimeMs)), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted)
+                            Spacer(Modifier.height(8.dp))
+                            // 같은 날 주행이 여러 개라 날짜 밑에 시각도 같이 적는다
+                            Text(dayFmt.format(Date(t.startTimeMs)), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp, color = InkMuted)
+                            Text(hourFmt.format(Date(t.startTimeMs)), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp, color = InkMuted.copy(alpha = 0.7f))
                         }
                     }
                 }
