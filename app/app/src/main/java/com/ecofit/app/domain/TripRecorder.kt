@@ -28,8 +28,6 @@ class TripRecorder(
     private val minTripKm: Float = 0.3f,
     private val hardBrakeDecel: Float = 4.0f,
     private val hardAccelMps2: Float = 3.0f,
-    // 데모 대본의 가속 구간이 3.0 근처라 절반쯤만 걸려서, 데모에서는 더 낮은 값으로 확실히 잡는다
-    private val demoHardAccelMps2: Float = 2.0f,
     private val windowMs: Long = 1000,
     private val eventGapMs: Long = 3000,
 ) {
@@ -105,8 +103,8 @@ class TripRecorder(
                 if (-accel >= hardBrakeDecel && now - a.lastBrakeEventMs >= eventGapMs) {
                     a.hardBrake++; a.lastBrakeEventMs = now
                 }
-                val accelThreshold = if (isDemo) demoHardAccelMps2 else hardAccelMps2
-                if (accel >= accelThreshold && now - a.lastAccelEventMs >= eventGapMs) {
+                // 데모도 실차와 같은 기준으로 판정한다. 데모 대본 쪽에서 급가속 구간을 확실하게 넣어 둔다
+                if (accel >= hardAccelMps2 && now - a.lastAccelEventMs >= eventGapMs) {
                     a.hardAccel++; a.lastAccelEventMs = now
                 }
                 a.winTimeMs = now; a.winSpeed = v1
@@ -123,7 +121,7 @@ class TripRecorder(
             distanceKm = dist,
             durationSec = (now - a.startTimeMs) / 1000,
             regenKwh = a.regen,
-            usedKwh = if (a.used > 0f) a.used else a.effUsed,
+            usedKwh = if (a.effUsed > 0f) a.effUsed else a.used,
             hardBrakeCount = a.hardBrake,
             hardAccelCount = a.hardAccel,
             hardBraking = now - a.lastBrakeEventMs < 2000,
@@ -135,15 +133,16 @@ class TripRecorder(
             _live.value = _live.value.copy(active = false, hardBraking = false, hardAccelerating = false)
             if (dist < minTripKm) return null
 
-            // 소모량 확정 순서: 배터리 kWh 차이 > SoC 차이 x 용량 > 전비로 쌓은 값
-            // 차 전비가 회생을 뺀 순소비 기준이라 SoC 쪽도 회생을 더하지 않고 순소비로 맞춘다
-            var used = a.used
+            // 소모량 확정 순서: 차 전비로 쌓은 값 > 배터리 kWh 차이 > SoC 차이 x 용량.
+            // 차 전비가 가장 해상도가 높고(실시간), SoC는 1% 단위라 짧은 주행에서 크게 튄다.
+            // 차 전비는 회생을 뺀 순소비 기준이라 SoC 쪽도 회생을 더하지 않는다
+            var used = a.effUsed
             val cap = s.batteryCapacityKwh
             val endSoc = s.batterySocPercent
+            if (used == 0f) used = a.used
             if (used == 0f && a.startSoc != null && endSoc != null && cap != null && a.startSoc - endSoc >= 1f) {
                 used = ((a.startSoc - endSoc) / 100f * cap).coerceAtLeast(0f)
             }
-            if (used == 0f) used = a.effUsed
 
             return TripData(
                 startTimeMs = a.startTimeMs,

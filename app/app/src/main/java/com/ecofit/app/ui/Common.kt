@@ -132,9 +132,12 @@ fun ProgressBar(fraction: Float, track: Color, fill: Color, modifier: Modifier =
 
 // 배터리 모양 그대로 그려서 숫자보다 한눈에 들어오게 한다. 막대그래프보다 "배터리"라는 걸 바로 알아볼 수 있다
 @Composable
-fun BatteryGauge(fraction: Float, fill: Color, modifier: Modifier = Modifier) {
+// 주행 중 화면에서는 움직이는 요소를 줄이려고 animate = false로 쓴다
+fun BatteryGauge(fraction: Float, fill: Color, modifier: Modifier = Modifier, animate: Boolean = true) {
     val outline = LocalContentColor.current.copy(alpha = 0.35f)
-    val f by animateFloatAsState(fraction.coerceIn(0f, 1f), animationSpec = tween(COUNT_UP_MS, easing = FastOutSlowInEasing), label = "battery")
+    val target = fraction.coerceIn(0f, 1f)
+    val animated by animateFloatAsState(target, animationSpec = tween(COUNT_UP_MS, easing = FastOutSlowInEasing), label = "battery")
+    val f = if (animate) animated else target
     Canvas(modifier.fillMaxWidth().height(48.dp)) {
         val nubWidth = size.height * 0.16f
         val nubHeight = size.height * 0.42f

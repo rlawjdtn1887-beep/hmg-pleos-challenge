@@ -56,7 +56,6 @@ import com.ecofit.app.ui.comfortScore
 import com.ecofit.app.ui.durationText
 import com.ecofit.app.ui.fmt
 import com.ecofit.app.ui.fmtKmOrM
-import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
@@ -100,13 +99,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
     val won = (trip.regenKwh * WON_PER_KWH).roundToInt()
     // 지난 주행이 지금 거리만큼 달렸을 때 아꼈을 금액과 비교
     val vsLast = lastWonPerKm?.takeIf { trip.distanceKm >= 0.1f }?.let { won - (it * trip.distanceKm).roundToInt() }
-    // 리포트에서만 보여주던 전비 비교를 주행 중에도 실시간으로. 짧은 거리에선 비율이 튀니 1km부터.
-    // 데모는 전체 주행이 1km가 안 돼서 못 보일 수 있어 데모 중엔 기준을 낮춘다
-    val netUsedKwh = trip.usedKwh - trip.regenKwh
-    val liveEffKmPerKwh = if (netUsedKwh > 0.01f) trip.distanceKm / netUsedKwh else null
-    val liveEffMinKm = if (isDemo) 0.15f else 1f
-    val liveVsBaseline = liveEffKmPerKwh?.takeIf { trip.distanceKm >= liveEffMinKm }
-        ?.let { ((it - Coaching.BASELINE_KM_PER_KWH) / Coaching.BASELINE_KM_PER_KWH * 100).roundToInt() }
+    // 전비 비교는 운전 중에 읽기엔 어려운 정보라 리포트에서만 보여준다
     val progress by animateFloatAsState((trip.regenKwh / TARGET_KWH).coerceIn(0f, 1f), label = "regen")
     // SDK 브레이크 값은 밟음 여부뿐이라 급제동은 감속도로 판단한 값을 쓴다
     val braking = (snap.brakePedalPercent ?: 0f) > 10f
@@ -179,7 +172,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             if (isDemo) {
                                 Spacer(Modifier.width(12.dp))
                                 Box(Modifier.clip(RoundedCornerShape(50)).background(Ink).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                                    Text("데모 · 가상 데이터", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ice)
+                                    Text("데모 · 가상 데이터", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ice)
                                 }
                             }
                         }
@@ -188,11 +181,11 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                             Spacer(Modifier.height(16.dp))
                             ProgressBar(progress, track = Ink.copy(alpha = 0.15f), fill = Ink)
                             Spacer(Modifier.height(8.dp))
+                            // 운전 중엔 한 줄에 두 가지까지만. 목표치는 리포트에서 본다
                             Text(
-                                "되찾은 전기 약 ${(trip.regenKwh * 1000).fmt(0)}Wh · 목표 ${(TARGET_KWH * 1000).toInt()}Wh" +
-                                    (liveVsBaseline?.let { " · 전비 ${it.signed()}%" } ?: "") +
-                                    (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더 되찾았어요" else " · 지난 주행보다 ${-it}원 적어요" } ?: ""),
-                                fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                                "되찾은 전기 약 ${(trip.regenKwh * 1000).fmt(0)}Wh" +
+                                    (vsLast?.let { if (it >= 0) " · 지난 주행보다 ${it}원 더" else " · 지난 주행보다 ${-it}원 적게" } ?: ""),
+                                fontSize = 26.sp, fontWeight = FontWeight.SemiBold,
                             )
                         }
                     }
@@ -226,6 +219,7 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                         BatteryGauge(
                             fraction = (snap.batterySocPercent ?: 0f) / 100f,
                             fill = if (Coaching.isLowBattery(snap.batterySocPercent)) Amber else Ice,
+                            animate = false,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -259,15 +253,14 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
                         // 내비 목적지가 있으면 남은 거리도 같이 보여준다
                         destKm?.takeIf { it > 0f }?.let { d ->
                             Text(
-                                "${destName ?: "목적지"}까지 ${d.fmtKmOrM()}" + (etaMin?.let { " · 약 ${it}분" } ?: ""),
-                                fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                                "${destName ?: "목적지"}까지 " + (if (d < 1f) d.fmtKmOrM() else "${d.fmt(1)}km") + (etaMin?.let { " · 약 ${it}분" } ?: ""),
+                                fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                             )
                         }
-                        // 소모량은 차가 전비를 줄 때만 쌓인다. 0이면 글자를 빼서 빈 숫자를 안 보여준다
-                        val usedWh = (trip.usedKwh * 1000).fmt(0)
+                        // 소모량·전비는 운전 중에 읽기 어려운 숫자라 리포트로 넘긴다
                         Text(
-                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점" + if (trip.usedKwh > 0f) " · 소모 ${usedWh}Wh" else "",
-                            fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                            "승차감 ${comfortScore(trip.hardBrakeCount, trip.hardAccelCount)}점",
+                            fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                         )
                     }
                 }

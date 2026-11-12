@@ -45,7 +45,6 @@ import com.ecofit.app.ui.TileTone
 import com.ecofit.app.ui.countUp
 import com.ecofit.app.ui.tour.tourTarget
 import com.ecofit.app.ui.fmt
-import com.ecofit.app.ui.signed
 import com.ecofit.app.ui.theme.Amber
 import com.ecofit.app.ui.theme.Ice
 import com.ecofit.app.ui.theme.Ink
@@ -106,7 +105,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
     LaunchedEffect(Unit) {
         if (greeted) return@LaunchedEffect
         greeted = true
-        delay(400)
+        delay(2500)
         val w = vm.weekly.value
         val hello = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
             in 5..10 -> "좋은 아침이에요."
@@ -172,12 +171,10 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                         )
                     }
                 }
+                // 전비 비교는 리포트에서만. 홈에선 몇 번 주행의 평균인지만 적는다
                 Text(
-                    // 이번 주 누적 거리가 짧으면 전비 비율이 "-100%"처럼 의미 없는 값으로 튄다.
-                    // 리포트 화면과 같은 기준(1km)으로 그 아래에선 비율을 안 보여준다
-                    s.efficiencyKmPerKwh?.let { "평균 전비 ${it.fmt(1)} km/kWh" + (s.vsBaselinePercent?.takeIf { s.distanceKm >= 1f }?.let { p -> " · 기준 대비 ${p.signed()}%" } ?: "") }
-                        ?: "주행 ${tripCount}회 평균",
-                    fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                    if (tripCount == 0) "첫 주행 뒤에 계산돼요" else "이번 주 주행 ${tripCount}회 평균",
+                    fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 )
             }
@@ -185,7 +182,8 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight()) {
                 TileLabel("되찾은 에너지")
-                Amount(s.regenKwh.fmt(2), "kWh", 96.sp)
+                // 리포트와 같은 Wh 단위로 통일
+                Amount("%,d".format((s.regenKwh * 1000).roundToInt()), "Wh", 96.sp)
             }
             Tile(TileTone.Dark, Modifier.weight(1f).fillMaxHeight(), watermark = true) {
                 TileLabel("이대로 달리면")
@@ -212,9 +210,10 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                             MoneyUnits.describe(annualWon) ?: MoneyUnits.untilNext(annualWon),
                             fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Ice,
                         )
-                        Text(
+                        // 거리 환산은 차 전비가 있어야 나온다. 0이면 줄을 숨긴다
+                        if (s.savedKm >= 0.1f) Text(
                             "이번 주 ${s.savedKm.fmt(1)}km를 공짜로 달린 셈",
-                            fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
+                            fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = InkMuted,
                         )
                     }
                 }
