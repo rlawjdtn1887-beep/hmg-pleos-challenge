@@ -51,7 +51,7 @@ EcoFit은 Pleos SDK와 AAOS 차량 API로 배터리·차속·기어·공조 데�
 
 > 전체 화면 설명: [docs/03_design/assets/screens/](docs/03_design/assets/screens/) · 기획서 그림: [docs/05_submission/figures/](docs/05_submission/figures/)
 
-> 시연영상: [docs/05_submission/demo-video/](docs/05_submission/demo-video/)에 추가 예정
+> 시연영상: [docs/05_submission/demo-video/](docs/05_submission/demo-video/)
 
 ## 실행 방법
 

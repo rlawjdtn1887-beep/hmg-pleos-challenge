@@ -5,7 +5,7 @@
 | 기획 요약 | [`planning.md`](planning.md) | 제출 기획서(접수양식 02) 요약 |  |
 | 기획서 그림 | [`figures/`](figures/) | 기획서 [그림 N] 원본 | PR #35 |
 | 발표자료 | [`slides/`](slides/) |  | 1차 통과 시 |
-| 시연영상 | [`demo-video/`](demo-video/) |  |  |
+| 시연영상 | [`demo-video/`](demo-video/) | `HMG차량용앱개발공모전 Ecofit (시연영상).mp4` |  |
 
 ## 주의
 
