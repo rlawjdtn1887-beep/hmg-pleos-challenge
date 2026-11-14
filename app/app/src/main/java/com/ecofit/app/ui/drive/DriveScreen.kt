@@ -129,8 +129,8 @@ fun DriveScreen(vm: DriveViewModel = viewModel()) {
         if (hardAccel) app.ttsRepo.speak("천천히 밟아보세요", interrupt = true, key = "accel", minGapMs = 15_000)
     }
     // 달리는 중 배터리가 20% 아래로 내려가면 한 번만 알린다.
-    // 데모 중 실제로 충전소 화면을 띄우는 건 EcoFitApp의 앱 스코프에서 한다 — 여기서 하면
-    // 데모가 곧장 P로 끝나며 이 화면이 사라질 때 지연 호출이 함께 취소돼 버린다
+    // 데모 중 실제로 충전소 화면을 띄우는 건 EcoFitApp의 앱 스코프에서 한다.
+    // 여기서 하면 데모가 곧장 P로 끝나며 이 화면이 사라질 때 지연 호출이 함께 취소돼 버린다
     var lowBatterySpoken by remember { mutableStateOf(false) }
     LaunchedEffect(trip.active) { if (!trip.active) lowBatterySpoken = false }
     LaunchedEffect(snap.batterySocPercent) {

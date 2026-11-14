@@ -29,7 +29,7 @@ import com.ecofit.app.ui.theme.Muted
 import com.ecofit.app.ui.theme.Paper
 
 // 앱을 처음 켤 때 한 번만 홈 위에 덮인다.
-// 심사위원이 앱을 켠 지 5초 안에 컨셉을 이해하게 하는 게 목적 — 그 뒤 화면들은 설명 없이 읽혀야 한다.
+// 심사위원이 앱을 켠 지 5초 안에 컨셉을 이해하게 하는 게 목적이다. 그 뒤 화면들은 설명 없이 읽혀야 한다.
 @Composable
 fun OnboardingScreen(onStart: () -> Unit, onDemo: () -> Unit) {
     Box(

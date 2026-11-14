@@ -26,10 +26,7 @@ class CarPropertySource(
         override fun onChangeEvent(value: CarPropertyValue<*>) {
             when (value.propertyId) {
                 VehiclePropertyIds.PERF_VEHICLE_SPEED ->
-                    (value.value as? Float)?.let {
-                        Log.d(tag, "PERF_VEHICLE_SPEED raw=$it m/s -> ${it * 3.6f} km/h")
-                        onSpeedKmh(it * 3.6f)
-                    }
+                    (value.value as? Float)?.let { onSpeedKmh(it * 3.6f) }
                 VehiclePropertyIds.GEAR_SELECTION ->
                     (value.value as? Int)?.let { onGear(toGear(it)) }
                 VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE ->

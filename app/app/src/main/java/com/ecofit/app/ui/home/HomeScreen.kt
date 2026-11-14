@@ -153,7 +153,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
             }
             Tile(TileTone.Light, Modifier.weight(1f).fillMaxHeight().tourTarget("home.score")) {
                 TileLabel("이번 주 에코 점수")
-                // 점수가 낮을수록 경고색(Amber)에, 높을수록 기본색(Ice)에 가깝게 — 링 색만 봐도 잘 타고 있는지 느껴지게.
+                // 점수가 낮을수록 경고색(Amber)에, 높을수록 기본색(Ice)에 가깝게 해서 링 색만 봐도 잘 타고 있는지 느껴지게 한다.
                 // Amber↔Ice를 0~100 전체로 섞으면 중간 지점에서 보색끼리 뒤섞여 탁한 회색이 돼서,
                 // "좋아요" 기준인 70점부터는 아예 선명한 Ice로 고정하고 그 아래 구간에서만 섞는다
                 val scoreColor = lerp(Amber, Ice, (((avgScore ?: 0) / 70f)).coerceIn(0f, 1f))

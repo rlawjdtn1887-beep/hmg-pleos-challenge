@@ -56,9 +56,9 @@ SoC가 정수(%)로만 와서 감속 한 번의 회생량은 SoC로 잴 수 없�
 
 ## 역할
 
-- 정수: `PleosVehicleRepository` TODO 채우기 (도메인별 register), NaviHelper 연동
+- 정수: `PleosVehicleRepository`·`NaviRepository` SDK 연동, 데모 주행 시나리오
 - 찬서: 화면·계산 로직·DB
 
 ## APK
 
-`apk/BackToTheFuture_EcoFit_release.apk` (추가 예정)
+`apk/BackToTheFuture_EcoFit_release.apk` — 소스 수정 시 `./gradlew assembleRelease` 후 재빌드 결과물로 교체
