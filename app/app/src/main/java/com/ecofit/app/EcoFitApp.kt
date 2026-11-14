@@ -74,6 +74,8 @@ class EcoFitApp : Application() {
                         appScope.launch {
                             delay(1500)
                             naviRepo.showNearbyChargingStations()
+                            // 출발 전 화면도 "충전소까지 남은 거리"를 보여주도록 데모 목적지를 바꾼다
+                            naviRepo.setDemoChargingDestination()
                         }
                     }
                 }

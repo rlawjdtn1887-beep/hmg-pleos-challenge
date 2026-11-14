@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 // 심사용 데모 주행. 정해진 대본대로 한 번 달리고 P로 끝난다.
-// 가속, 긴 회생, 급제동 한 번, 정차까지 약 45초 안에 전부 나온다.
+// 가속, 긴 회생, 급제동 한 번, 저배터리 충전소 안내까지 약 50초, 이후 15초 정차 구간을 두고 P로 끝난다.
 class DemoVehicleRepository(
     private val onFinished: () -> Unit,
 ) : VehicleRepository {
@@ -68,8 +68,13 @@ class DemoVehicleRepository(
         Step(6, 5f, 35f, Gear.D),
         Step(2, 0f, 30f, Gear.D),
         Step(1, 0f, 0f, Gear.D),
-        Step(2, 0f, 0f, Gear.P),
     )
+
+    // 저배터리로 충전소 안내가 뜬 뒤 "출발 전" 화면에서 바뀐 목적지(충전소까지 거리)까지
+    // 둘러볼 시간을 주는 정차 구간. SOC 진행률 계산(REFERENCE)에는 안 넣어서, 이 구간 내내
+    // 배터리는 20% 아래로 고정돼 있다. 이 구간이 끝나면 P로 세워 데모를 마친다
+    private val bufferStep = Step(BUFFER_SEC, 0f, 0f, Gear.D)
+    private val endStep = Step(2, 0f, 0f, Gear.P)
 
     private class Step(val sec: Int, val targetKmh: Float, val brake: Float, val gear: Gear) {
         // 매번 똑같이 재생되면 리포트에 똑같은 숫자만 쌓여서 지난 주행 비교가 의미 없어진다.
@@ -86,11 +91,14 @@ class DemoVehicleRepository(
         if (job?.isActive == true) return
         _isConnected.value = true
         val runScript = script.map { it.jittered() }
-        val totalTicks = runScript.sumOf { it.sec * TICKS_PER_SEC }
+        // SOC는 bufferStep·endStep을 뺀 "원래 대본" 기준으로만 72%->14%로 줄어들고,
+        // 그 뒤 정차 구간에서는 14%에 고정된 채로 유지된다 (progress가 1을 넘어도 coerceAtMost로 묶음)
+        val referenceTicks = runScript.sumOf { it.sec * TICKS_PER_SEC }
+        val totalTicks = referenceTicks + (bufferStep.sec + endStep.sec) * TICKS_PER_SEC
         job = scope.launch {
             var speed = 0f
             var elapsedTicks = 0
-            for (step in runScript) {
+            for (step in runScript + bufferStep + endStep) {
                 val from = speed
                 val ticks = step.sec * TICKS_PER_SEC
                 for (i in 1..ticks) {
@@ -100,7 +108,7 @@ class DemoVehicleRepository(
                     val dtH = 1f / TICKS_PER_SEC / 3600f
                     // 배터리를 끝까지 72%로 고정해 두면 저배터리 알림·충전소 안내를 데모로 보여줄 수가 없어서,
                     // 대본 진행률에 맞춰 72% -> 14%로 서서히 줄어들게 한다 (거의 끝날 때쯤 20% 아래로 떨어짐)
-                    val progress = elapsedTicks.toFloat() / totalTicks
+                    val progress = (elapsedTicks.toFloat() / referenceTicks).coerceAtMost(1f)
                     val soc = START_SOC - progress * (START_SOC - END_SOC)
                     _snapshot.update { s ->
                         s.copy(
@@ -129,6 +137,8 @@ class DemoVehicleRepository(
 
     private companion object {
         const val TICKS_PER_SEC = 4
+        // 저배터리 안내 뜬 뒤 화면을 둘러볼 수 있게 주는 정차 시간(초)
+        const val BUFFER_SEC = 15
         const val START_SOC = 72f
         const val END_SOC = 14f
         const val START_RANGE_KM = 288f

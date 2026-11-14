@@ -53,6 +53,9 @@ class NaviRepository(context: Context) {
     private val demoDistanceKm = MutableStateFlow<Float?>(null)
     private val demoTimeMin = MutableStateFlow<Int?>(null)
     private val demoName = MutableStateFlow<String?>(null)
+    // 저배터리로 충전소 안내가 뜬 뒤에는 목적지를 "인근 충전소"로 바꿔서 고정한다.
+    // true인 동안은 updateDemo()가 더 이상 원래 목적지(현대차 본사) 거리로 덮어쓰지 않는다
+    private var chargingMode = false
 
     val remainDistanceKm: StateFlow<Float?> = combine(_remainDistanceKm, demoDistanceKm) { real, demo -> demo ?: real }
         .stateIn(scope, SharingStarted.Eagerly, null)
@@ -104,17 +107,30 @@ class NaviRepository(context: Context) {
 
     // 데모 주행 시작. 목적지를 하나 잡아 두고, 데모가 달린 거리만큼 남은 거리를 줄인다
     fun startDemo() {
+        chargingMode = false
         demoName.value = DEMO_DEST_NAME
         updateDemo(0f)
     }
 
     fun updateDemo(traveledKm: Float) {
+        if (chargingMode) return
         val remain = (DEMO_DEST_KM - traveledKm).coerceAtLeast(0.1f)
         demoDistanceKm.value = remain
         demoTimeMin.value = (remain / DEMO_AVG_KMH * 60f).roundToInt().coerceAtLeast(1)
     }
 
+    // 저배터리라 충전소 화면을 띄운 뒤에는, 출발 전 화면에도 "충전소까지 남은 거리"가
+    // 보이도록 데모 목적지 자체를 충전소로 바꿔치기한다 (실제 충전소 좌표는 알 수 없어
+    // 거리는 근사값)
+    fun setDemoChargingDestination() {
+        chargingMode = true
+        demoName.value = CHARGING_DEST_NAME
+        demoDistanceKm.value = CHARGING_DEST_KM
+        demoTimeMin.value = (CHARGING_DEST_KM / DEMO_AVG_KMH * 60f).roundToInt().coerceAtLeast(1)
+    }
+
     fun stopDemo() {
+        chargingMode = false
         demoName.value = null
         demoDistanceKm.value = null
         demoTimeMin.value = null
@@ -144,5 +160,7 @@ class NaviRepository(context: Context) {
         private const val DEMO_DEST_NAME = "현대자동차 본사"
         private const val DEMO_DEST_KM = 12f
         private const val DEMO_AVG_KMH = 40f
+        private const val CHARGING_DEST_NAME = "인근 충전소"
+        private const val CHARGING_DEST_KM = 1.8f
     }
 }
