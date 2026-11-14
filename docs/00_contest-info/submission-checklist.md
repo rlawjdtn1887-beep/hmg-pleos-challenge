@@ -1,6 +1,6 @@
 # 제출 조건 체크리스트
 
-> 출처: [appdevchallenge.auto-hmg.io/guide/submission](https://appdevchallenge.auto-hmg.io/guide/submission) (2026-10-30 확인)
+> 출처: [appdevchallenge.auto-hmg.io/guide/submission](https://appdevchallenge.auto-hmg.io/guide/submission) (2026-11-14 재확인)
 > 접수양식의 세부 파일 형식·분량 제한은 공식 페이지 본문에 없어 접수양식 다운로드 시 직접 확인이 필요합니다.
 
 ## 제출물
@@ -17,8 +17,9 @@
 - [ ] 수정 제출 시 메일 제목: `[수정제출] [차량용 앱 개발 공모전] 팀명(개인은 성명)_대표자명`
 - [ ] 접수 이메일: appdevchallenge@hyundai-partners.com
 - [ ] APK 파일명: `팀명_앱이름_release.apk` (실행 가능한 release 빌드)
-- [ ] APK는 저장소 `apk/` 폴더에 포함. 용량 초과 시 GitHub Releases에 등록 후 Release 페이지 주소 제출
+- [ ] APK는 저장소 `apk/` 폴더에 포함. GitHub 업로드 용량 초과 시 GitHub Releases에 등록 후 Release 페이지 주소 제출
 - [ ] 파일 형식·분량 제한: 접수양식 다운로드 시 확인 필요 (페이지 본문에 미기재)
+- [ ] **접수 메일에 저장소 주소 + 최종 커밋 해시(commit hash)를 반드시 기재** — 심사는 그 커밋 기준으로 진행됨
 
 ## 기술 조건
 
@@ -26,15 +27,20 @@
 - [ ] Gradle 8.0 이상
 - [ ] Java 또는 Kotlin
 - [ ] 사용 가능 SDK: Vehicle, NaviHelper, TextToSpeech, SpeechToText, FusedLocation
-- [ ] (비공개 저장소 제출 시) 공지된 심사용 GitHub 계정을 Collaborator로 초대
-- [ ] (비공개 저장소 제출 시) Collaborator 권한 범위 확인 — 개인 계정은 쓰기 권한까지 부여됨
-- [ ] 마감 전 심사용 계정으로 저장소 접근 테스트 완료
+
+## GitHub 저장소 공개 여부
+
+- [ ] 비공개(Private) 저장소로도 제출 가능 — 심사용 계정을 Collaborator로 초대할 필요는 없음(2026-11-14 기준 공식 안내)
+- [ ] 비공개로 제출했다면 **2026-11-16(월)까지 Public 전환 필수**. 전환 안 하면 개발 산출물 가산점 미반영
+- [ ] Public 전환 후 1차 심사 결과 발표일(2026-11-23)까지 공개 상태 유지
+- [ ] Public 전환이 어려우면 소스+APK 압축 파일 다운로드 링크를 마감 전 접수 메일로 별도 발송
 
 ## GitHub 제출 시 README.md 작성 항목
 
 - [ ] 앱 이름 및 한 줄 소개
 - [ ] 실행 방법
 - [ ] 테스트 환경 및 필요한 설정
+- [ ] 개발에 사용한 Pleos Connect 에뮬레이터 버전과 화면 규격(해상도)
 - [ ] APK 파일 위치 또는 GitHub Release 링크
 
 ## 제출 전 최종 확인
