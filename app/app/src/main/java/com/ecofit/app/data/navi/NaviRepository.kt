@@ -156,7 +156,9 @@ class NaviRepository(context: Context) {
     }
 
     companion object {
-        private const val POLL_INTERVAL_MS = 15_000L
+        // 실제 주행 중 "목적지까지 남은 거리"가 눈에 보이게 줄어들도록 짧게 잡는다.
+        // (예전 15초짜리는 시연 녹화 중엔 체감상 거의 안 바뀌는 것처럼 보였다)
+        private const val POLL_INTERVAL_MS = 3_000L
         private const val DEMO_DEST_NAME = "현대자동차 본사"
         private const val DEMO_DEST_KM = 12f
         private const val DEMO_AVG_KMH = 40f
