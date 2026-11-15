@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * NaviHelper SDK 연동. 담당: 정수
+ * NaviHelper SDK 연동.
  *
  * BriefingScreen(출발 전)의 "목적지까지 남은 거리"를 채우는 용도.
  * 사용자가 내비 앱에 목적지를 설정해둔 경우에만 값이 들어오고,

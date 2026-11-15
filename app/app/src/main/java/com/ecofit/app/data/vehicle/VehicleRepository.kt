@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 차량 데이터 소스 추상화.
- * - PleosVehicleRepository: 실제 SDK (정수)
- * - FakeVehicleRepository: 에뮬레이터 없이 UI 개발용 (찬서)
+ * - PleosVehicleRepository: 실제 SDK
+ * - FakeVehicleRepository: 에뮬레이터 없이 UI 개발용
  */
 interface VehicleRepository {
     val snapshot: StateFlow<VehicleSnapshot>

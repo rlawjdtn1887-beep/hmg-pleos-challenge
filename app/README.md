@@ -28,13 +28,13 @@ com.ecofit.app
 ├── MainActivity.kt              네비게이션 레일 + 4개 화면
 ├── data
 │   ├── model
-│   │   ├── VehicleSnapshot.kt   차량 상태 한 시점 (정수 ↔ 찬서 인터페이스)
+│   │   ├── VehicleSnapshot.kt   차량 상태 한 시점 (SDK 연동 ↔ 화면 공통 인터페이스)
 │   │   └── TripData.kt          주행 한 건 결과
 │   ├── vehicle
 │   │   ├── VehicleRepository.kt        인터페이스
-│   │   ├── PleosVehicleRepository.kt   실제 SDK 연동 (정수)
+│   │   ├── PleosVehicleRepository.kt   실제 SDK 연동
 │   │   ├── CarPropertySource.kt        기어·차속 (AAOS CarPropertyManager)
-│   │   └── FakeVehicleRepository.kt    가짜 시뮬레이터 (찬서)
+│   │   └── FakeVehicleRepository.kt    가짜 시뮬레이터
 │   └── local                    Room DB
 ├── domain
 │   ├── TripRecorder.kt          기어 D→P 감지해 TripData 생성, 주행 중 실시간 값
@@ -56,8 +56,8 @@ SoC가 정수(%)로만 와서 감속 한 번의 회생량은 SoC로 잴 수 없�
 
 ## 역할
 
-- 정수: `PleosVehicleRepository`·`NaviRepository` SDK 연동, 데모 주행 시나리오
-- 찬서: 화면·계산 로직·DB
+- SDK 연동: `PleosVehicleRepository`·`NaviRepository` SDK 연동, 데모 주행 시나리오
+- UI/UX: 화면·계산 로직·DB
 
 ## APK
 

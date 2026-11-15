@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Pleos Vehicle SDK 연동. 담당: 정수
+ * Pleos Vehicle SDK 연동.
  *
  * 구조:
  *   start()  -> vehicle.initialize() -> 각 도메인 capability 확인 -> register 콜백

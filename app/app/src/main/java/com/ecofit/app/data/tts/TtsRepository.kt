@@ -18,7 +18,7 @@ private const val PREFS_NAME = "ecofit_prefs"
 private const val KEY_TTS_ENABLED = "tts_enabled"
 
 /**
- * TextToSpeech SDK 연동. 담당: 정수
+ * TextToSpeech SDK 연동.
  *
  * ON_DEVICE 모드만 쓴다. SERVER/HYBRID는 registerApp()에 Pleos가 발급하는
  * 앱 등록 키가 필요한데 아직 없음. ON_DEVICE는 키 없이 기기 내 CAAS 엔진에
